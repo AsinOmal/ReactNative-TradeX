@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../../src/config/fonts';
@@ -102,52 +101,61 @@ export default function CalendarScreen() {
           <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.textMuted, marginTop: scale(4) }}>View your monthly performance</Text>
         </View>
         
-        {/* Streak Card */}
-        {streak > 0 && (
-          <View style={{ paddingHorizontal: scale(20), marginBottom: scale(20) }}>
-            <LinearGradient
-              colors={['#FFB800', '#FF8C00']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ flexDirection: 'row', alignItems: 'center', padding: scale(16), borderRadius: scale(16), gap: scale(14) }}
-            >
-              <View style={{ width: scale(48), height: scale(48), borderRadius: scale(24), backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontSize: fontScale(26) }}>🔥</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: 'rgba(255,255,255,0.85)' }}>Profit Streak</Text>
-                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(22), color: colors.white }}>{streak} months</Text>
-              </View>
-              <Ionicons name="flame" size={scale(28)} color="rgba(255,255,255,0.5)" />
-            </LinearGradient>
-          </View>
-        )}
-        
-        {/* Year Selector */}
+        {/* Year Selector with Integrated Streak */}
         <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: themeColors.card, borderRadius: scale(16), padding: scale(6), borderWidth: 1, borderColor: themeColors.border }}>
+          <View style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            backgroundColor: streak > 0 ? '#FFB800' : themeColors.card, 
+            borderRadius: scale(16), 
+            padding: scale(6), 
+            borderWidth: 1, 
+            borderColor: streak > 0 ? '#FFB800' : themeColors.border,
+            shadowColor: streak > 0 ? '#FFB800' : 'transparent',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: streak > 0 ? 0.3 : 0,
+            shadowRadius: 10,
+            elevation: streak > 0 ? 8 : 0,
+          }}>
             <TouchableOpacity 
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', justifyContent: 'center', alignItems: 'center' }}
+              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: streak > 0 ? 'rgba(255,255,255,0.2)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'), justifyContent: 'center', alignItems: 'center' }}
               onPress={() => setSelectedYear(y => y - 1)}
             >
-              <Ionicons name="chevron-back" size={scale(22)} color={themeColors.text} />
+              <Ionicons name="chevron-back" size={scale(22)} color={streak > 0 ? '#FFFFFF' : themeColors.text} />
             </TouchableOpacity>
             
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(26), color: themeColors.text }}>{selectedYear}</Text>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              {/* Main Row: Streak Number - Year - Fire Icon */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                {streak > 0 && (
+                  <View style={{ width: scale(40), alignItems: 'flex-end', marginRight: scale(16) }}>
+                    <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF', opacity: 0.9 }}>{streak}</Text>
+                  </View>
+                )}
+                
+                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(26), color: streak > 0 ? '#FFFFFF' : themeColors.text }}>{selectedYear}</Text>
+                
+                {streak > 0 && (
+                  <View style={{ width: scale(40), alignItems: 'flex-start', marginLeft: scale(16) }}>
+                    <Ionicons name="flame" size={scale(22)} color="#FFFFFF" style={{ opacity: 0.9 }} />
+                  </View>
+                )}
+              </View>
+              
               {stats.total > 0 && (
-                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: stats.totalPnL >= 0 ? colors.profit : colors.loss }}>
+                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: streak > 0 ? 'rgba(255,255,255,0.9)' : (stats.totalPnL >= 0 ? colors.profit : colors.loss), marginTop: -scale(2) }}>
                   {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
                 </Text>
               )}
             </View>
             
             <TouchableOpacity 
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', justifyContent: 'center', alignItems: 'center', opacity: selectedYear >= currentYear ? 0.4 : 1 }}
+              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: streak > 0 ? 'rgba(255,255,255,0.2)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'), justifyContent: 'center', alignItems: 'center', opacity: selectedYear >= currentYear ? 0.4 : 1 }}
               onPress={() => setSelectedYear(y => y + 1)}
               disabled={selectedYear >= currentYear}
             >
-              <Ionicons name="chevron-forward" size={scale(22)} color={themeColors.text} />
+              <Ionicons name="chevron-forward" size={scale(22)} color={streak > 0 ? '#FFFFFF' : themeColors.text} />
             </TouchableOpacity>
           </View>
         </View>
