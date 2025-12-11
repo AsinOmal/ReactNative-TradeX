@@ -1,186 +1,270 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChartView } from '../../src/components/ChartView';
-import { EmptyState } from '../../src/components/EmptyState';
-import { StatCard } from '../../src/components/StatCard';
+import { fonts } from '../../src/config/fonts';
+import { colors } from '../../src/config/theme';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useTrading } from '../../src/context/TradingContext';
-import { calculateOverallStats, filterMonthsByRange, getChartData } from '../../src/services/calculationService';
-import { formatMonthDisplay } from '../../src/utils/dateUtils';
-import { formatCurrency, formatPercentage } from '../../src/utils/formatters';
 
-type TimeRange = '6M' | '1Y' | 'ALL';
+const screenWidth = Dimensions.get('window').width;
 
 export default function AnalyticsScreen() {
-  const { months } = useTrading();
   const { isDark } = useTheme();
-  const [selectedRange, setSelectedRange] = useState<TimeRange>('ALL');
-  const [showPercentage, setShowPercentage] = useState(false);
+  const { months, stats } = useTrading();
   
-  const filteredMonths = filterMonthsByRange(months, selectedRange);
-  const chartData = getChartData(filteredMonths);
-  const stats = calculateOverallStats(filteredMonths);
-  
-  const colors = {
-    bg: isDark ? '#0A0A0A' : '#FAFAFA',
-    card: isDark ? '#1F1F23' : '#F4F4F5',
-    border: isDark ? '#27272A' : '#E4E4E7',
-    text: isDark ? '#F4F4F5' : '#18181B',
-    textMuted: isDark ? '#71717A' : '#A1A1AA',
-    primary: '#6366F1',
-    profit: '#10B981',
-    loss: '#EF4444',
+  const themeColors = {
+    bg: isDark ? colors.darkBg : colors.lightBg,
+    card: isDark ? colors.darkCard : colors.lightCard,
+    text: isDark ? colors.textLight : colors.textDark,
+    textMuted: isDark ? colors.textMuted : colors.textMutedLight,
   };
   
-  if (months.length === 0) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Analytics
-          </Text>
-        </View>
-        <EmptyState
-          title="No Data Yet"
-          message="Start adding monthly data to see your performance analytics"
-          icon="📊"
-        />
-      </SafeAreaView>
-    );
-  }
+  const formatCurrency = (value: number) => {
+    const formatted = Math.abs(value).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+    return value < 0 ? `-${formatted}` : formatted;
+  };
+  
+  const formatPercentage = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  };
+  
+  // Calculate analytics
+  const profitableMonths = months.filter(m => {
+    const pnl = m.endingCapital - m.startingCapital;
+    return pnl > 0;
+  }).length;
+  
+  const losingMonths = months.filter(m => {
+    const pnl = m.endingCapital - m.startingCapital;
+    return pnl < 0;
+  }).length;
+  
+  const bestMonth = months.length > 0 
+    ? months.reduce((best, m) => {
+        const pnl = m.endingCapital - m.startingCapital;
+        const bestPnl = best.endingCapital - best.startingCapital;
+        return pnl > bestPnl ? m : best;
+      })
+    : null;
+    
+  const worstMonth = months.length > 0
+    ? months.reduce((worst, m) => {
+        const pnl = m.endingCapital - m.startingCapital;
+        const worstPnl = worst.endingCapital - worst.startingCapital;
+        return pnl < worstPnl ? m : worst;
+      })
+    : null;
+  
+  // Prepare chart data - last 6 months, sorted by date
+  const sortedMonths = [...months]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-6);
+  
+  const chartLabels = sortedMonths.map(m => {
+    const [year, month] = m.month.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return monthNames[parseInt(month) - 1];
+  });
+  
+  const chartData = sortedMonths.map(m => m.endingCapital - m.startingCapital);
+  
+  // Calculate cumulative P&L for the line chart
+  const cumulativeData = chartData.reduce<number[]>((acc, val) => {
+    const last = acc.length > 0 ? acc[acc.length - 1] : 0;
+    acc.push(last + val);
+    return acc;
+  }, []);
+  
+  const hasChartData = sortedMonths.length >= 2;
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView style={styles.flex1} contentContainerStyle={{ paddingBottom: 120 }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.bg }]}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Analytics
+          <Text style={[styles.title, { color: themeColors.text }]}>Analytics</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>
+            Your trading performance
           </Text>
         </View>
         
-        {/* Time Range Selector */}
-        <View style={[styles.rangeContainer, { backgroundColor: colors.card }]}>
-          {(['6M', '1Y', 'ALL'] as TimeRange[]).map(range => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.rangeButton,
-                selectedRange === range && styles.rangeButtonActive
-              ]}
-              onPress={() => setSelectedRange(range)}
-            >
-              <Text style={[
-                styles.rangeText,
-                { color: selectedRange === range ? '#FFFFFF' : colors.textMuted }
-              ]}>
-                {range === 'ALL' ? 'All Time' : range}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        
-        {/* Chart */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-              Performance Chart
+        {months.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="bar-chart-outline" size={64} color={themeColors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: themeColors.text }]}>No Data Yet</Text>
+            <Text style={[styles.emptyText, { color: themeColors.textMuted }]}>
+              Add your first month to see analytics
             </Text>
-            <TouchableOpacity 
-              style={[styles.toggleButton, { backgroundColor: colors.card }]}
-              onPress={() => setShowPercentage(!showPercentage)}
-            >
-              <Text style={[styles.toggleText, { color: colors.text }]}>
-                {showPercentage ? 'Show $' : 'Show %'}
-              </Text>
-            </TouchableOpacity>
           </View>
-          <ChartView data={chartData} showPercentage={showPercentage} />
-        </View>
-        
-        {/* Performance Metrics */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-            Performance Metrics
-          </Text>
-          
-          <View style={[styles.metricsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.metricRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Total P&L</Text>
-              <Text style={[styles.metricValue, { color: stats.totalProfitLoss >= 0 ? colors.profit : colors.loss }]}>
-                {formatCurrency(stats.totalProfitLoss, true)}
-              </Text>
-            </View>
+        ) : (
+          <>
+            {/* P&L Chart */}
+            {hasChartData && (
+              <View style={[styles.chartCard, { backgroundColor: themeColors.card }]}>
+                <View style={styles.chartHeader}>
+                  <Text style={[styles.chartTitle, { color: themeColors.text }]}>Cumulative P&L</Text>
+                  <Text style={[styles.chartSubtitle, { color: themeColors.textMuted }]}>Last {sortedMonths.length} months</Text>
+                </View>
+                <LineChart
+                  data={{
+                    labels: chartLabels,
+                    datasets: [{ 
+                      data: cumulativeData.length > 0 ? cumulativeData : [0],
+                      color: () => colors.primary,
+                      strokeWidth: 3,
+                    }],
+                  }}
+                  width={screenWidth - 72}
+                  height={180}
+                  yAxisLabel="$"
+                  yAxisSuffix=""
+                  chartConfig={{
+                    backgroundColor: 'transparent',
+                    backgroundGradientFrom: themeColors.card,
+                    backgroundGradientTo: themeColors.card,
+                    decimalPlaces: 0,
+                    color: () => colors.primary,
+                    labelColor: () => themeColors.textMuted,
+                    propsForDots: {
+                      r: '5',
+                      strokeWidth: '2',
+                      stroke: colors.primary,
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                    },
+                  }}
+                  bezier
+                  style={styles.chart}
+                  withInnerLines={true}
+                  withOuterLines={false}
+                />
+              </View>
+            )}
             
-            <View style={[styles.metricRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Avg Monthly Return</Text>
-              <Text style={[styles.metricValue, { color: stats.averageReturn >= 0 ? colors.profit : colors.loss }]}>
-                {formatPercentage(stats.averageReturn, true)}
-              </Text>
-            </View>
-            
-            <View style={[styles.metricRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Best Month</Text>
-              <View style={styles.metricValueContainer}>
-                <Text style={[styles.metricValue, { color: colors.profit }]}>
-                  {stats.bestMonth ? formatCurrency(stats.bestMonth.netProfitLoss, true) : 'N/A'}
+            {/* Summary Cards */}
+            <View style={styles.summaryGrid}>
+              <View style={[styles.summaryCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Total P&L</Text>
+                <Text style={[styles.summaryValue, { color: stats.totalProfitLoss >= 0 ? colors.profit : colors.loss }]}>
+                  {formatCurrency(stats.totalProfitLoss)}
                 </Text>
-                {stats.bestMonth && (
-                  <Text style={[styles.metricSub, { color: colors.textMuted }]}>
-                    {formatMonthDisplay(stats.bestMonth.month)}
-                  </Text>
-                )}
+              </View>
+              
+              <View style={[styles.summaryCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Win Rate</Text>
+                <Text style={[styles.summaryValue, { color: colors.primary }]}>
+                  {stats.winRate.toFixed(1)}%
+                </Text>
+              </View>
+              
+              <View style={[styles.summaryCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Avg Return</Text>
+                <Text style={[styles.summaryValue, { color: stats.averageReturn >= 0 ? colors.profit : colors.loss }]}>
+                  {formatPercentage(stats.averageReturn)}
+                </Text>
+              </View>
+              
+              <View style={[styles.summaryCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Total Months</Text>
+                <Text style={[styles.summaryValue, { color: themeColors.text }]}>
+                  {months.length}
+                </Text>
               </View>
             </View>
             
-            <View style={[styles.metricRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Worst Month</Text>
-              <View style={styles.metricValueContainer}>
-                <Text style={[styles.metricValue, { color: colors.loss }]}>
-                  {stats.worstMonth ? formatCurrency(stats.worstMonth.netProfitLoss, true) : 'N/A'}
-                </Text>
-                {stats.worstMonth && (
-                  <Text style={[styles.metricSub, { color: colors.textMuted }]}>
-                    {formatMonthDisplay(stats.worstMonth.month)}
-                  </Text>
-                )}
+            {/* Win/Loss Breakdown */}
+            <View style={[styles.breakdownCard, { backgroundColor: themeColors.card }]}>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>Win/Loss Breakdown</Text>
+              
+              <View style={styles.breakdownRow}>
+                <View style={styles.breakdownItem}>
+                  <View style={[styles.indicator, { backgroundColor: colors.profit }]} />
+                  <Text style={[styles.breakdownLabel, { color: themeColors.textMuted }]}>Profitable</Text>
+                  <Text style={[styles.breakdownValue, { color: colors.profit }]}>{profitableMonths}</Text>
+                </View>
+                
+                <View style={styles.breakdownItem}>
+                  <View style={[styles.indicator, { backgroundColor: colors.loss }]} />
+                  <Text style={[styles.breakdownLabel, { color: themeColors.textMuted }]}>Losing</Text>
+                  <Text style={[styles.breakdownValue, { color: colors.loss }]}>{losingMonths}</Text>
+                </View>
+              </View>
+              
+              {/* Progress Bar */}
+              <View style={styles.progressContainer}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { 
+                      backgroundColor: colors.profit,
+                      flex: profitableMonths || 1,
+                    }
+                  ]} 
+                />
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { 
+                      backgroundColor: colors.loss,
+                      flex: losingMonths || 1,
+                    }
+                  ]} 
+                />
               </View>
             </View>
             
-            <View style={[styles.metricRow, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Profitable Months</Text>
-              <Text style={[styles.metricValue, { color: colors.text }]}>
-                {stats.profitableMonths} / {stats.totalMonths}
-              </Text>
+            {/* Best & Worst Month */}
+            <View style={[styles.extremesCard, { backgroundColor: themeColors.card }]}>
+              <Text style={[styles.cardTitle, { color: themeColors.text }]}>Performance Extremes</Text>
+              
+              {bestMonth && (
+                <View style={styles.extremeRow}>
+                  <View style={[styles.extremeIcon, { backgroundColor: 'rgba(16, 185, 95, 0.1)' }]}>
+                    <Ionicons name="trending-up" size={20} color={colors.profit} />
+                  </View>
+                  <View style={styles.extremeInfo}>
+                    <Text style={[styles.extremeLabel, { color: themeColors.textMuted }]}>Best Month</Text>
+                    <Text style={[styles.extremeMonth, { color: themeColors.text }]}>{bestMonth.month}</Text>
+                  </View>
+                  <Text style={[styles.extremeValue, { color: colors.profit }]}>
+                    {formatCurrency(bestMonth.endingCapital - bestMonth.startingCapital)}
+                  </Text>
+                </View>
+              )}
+              
+              {worstMonth && (
+                <View style={[styles.extremeRow, { borderBottomWidth: 0 }]}>
+                  <View style={[styles.extremeIcon, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                    <Ionicons name="trending-down" size={20} color={colors.loss} />
+                  </View>
+                  <View style={styles.extremeInfo}>
+                    <Text style={[styles.extremeLabel, { color: themeColors.textMuted }]}>Worst Month</Text>
+                    <Text style={[styles.extremeMonth, { color: themeColors.text }]}>{worstMonth.month}</Text>
+                  </View>
+                  <Text style={[styles.extremeValue, { color: colors.loss }]}>
+                    {formatCurrency(worstMonth.endingCapital - worstMonth.startingCapital)}
+                  </Text>
+                </View>
+              )}
             </View>
-            
-            <View style={styles.metricRowLast}>
-              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Win Rate</Text>
-              <Text style={[styles.metricValue, { color: stats.winRate >= 50 ? colors.profit : colors.loss }]}>
-                {stats.winRate.toFixed(1)}%
-              </Text>
-            </View>
-          </View>
-        </View>
+          </>
+        )}
         
-        {/* Summary */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
-            Summary
-          </Text>
-          <View style={styles.statsRow}>
-            <StatCard
-              title="Total Profits"
-              value={formatCurrency(stats.totalProfit)}
-              valueColor="profit"
-            />
-            <StatCard
-              title="Total Losses"
-              value={formatCurrency(stats.totalLoss)}
-              valueColor="loss"
-            />
-          </View>
-        </View>
+        {/* Bottom padding for tab bar */}
+        <View style={{ height: 120 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -190,98 +274,162 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  flex1: {
+  scrollView: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  rangeContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 4,
-    borderRadius: 12,
-  },
-  rangeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  rangeButtonActive: {
-    backgroundColor: '#6366F1',
-  },
-  rangeText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  section: {
-    paddingHorizontal: 20,
+    marginTop: 20,
     marginBottom: 24,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 28,
+    marginBottom: 4,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  toggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metricsCard: {
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  metricRowLast: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  metricLabel: {
+  subtitle: {
+    fontFamily: fonts.regular,
     fontSize: 14,
   },
-  metricValue: {
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  emptyTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  chartCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  chartHeader: {
+    marginBottom: 12,
+  },
+  chartTitle: {
+    fontFamily: fonts.semiBold,
     fontSize: 16,
-    fontWeight: '600',
   },
-  metricValueContainer: {
-    alignItems: 'flex-end',
-  },
-  metricSub: {
+  chartSubtitle: {
+    fontFamily: fonts.regular,
     fontSize: 12,
     marginTop: 2,
   },
-  statsRow: {
+  chart: {
+    borderRadius: 12,
+  },
+  summaryGrid: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    rowGap: 12,
+  },
+  summaryCard: {
+    width: '48%',
+    padding: 16,
+    borderRadius: 16,
+  },
+  summaryLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  summaryValue: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+  },
+  breakdownCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  breakdownItem: {
+    alignItems: 'center',
+  },
+  indicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  breakdownLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  breakdownValue: {
+    fontFamily: fonts.bold,
+    fontSize: 24,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    gap: 2,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  extremesCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  extremeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  extremeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  extremeInfo: {
+    flex: 1,
+  },
+  extremeLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  extremeMonth: {
+    fontFamily: fonts.semiBold,
+    fontSize: 14,
+  },
+  extremeValue: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
   },
 });

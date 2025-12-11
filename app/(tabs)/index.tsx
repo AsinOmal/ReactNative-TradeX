@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../src/components/EmptyState';
 import { MonthCard } from '../../src/components/MonthCard';
 import { StatCard } from '../../src/components/StatCard';
+import { colors } from '../../src/config/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useTrading } from '../../src/context/TradingContext';
 import { formatMonthDisplay, getMonthKey } from '../../src/utils/dateUtils';
@@ -15,6 +17,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { months, stats, isLoading, loadMonths, getRecentMonths } = useTrading();
   const { isDark, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [refreshing, setRefreshing] = React.useState(false);
   
   const recentMonths = getRecentMonths(3);
@@ -27,20 +30,31 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [loadMonths]);
   
-  const colors = {
-    bg: isDark ? '#0A0A0A' : '#FAFAFA',
-    card: isDark ? '#1F1F23' : '#F4F4F5',
-    text: isDark ? '#F4F4F5' : '#18181B',
-    textMuted: isDark ? '#71717A' : '#A1A1AA',
-    primary: '#6366F1',
-    border: isDark ? '#27272A' : '#E4E4E7',
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: logout },
+      ]
+    );
+  };
+  
+  const themeColors = {
+    bg: isDark ? colors.darkBg : colors.lightBg,
+    card: isDark ? colors.darkCard : colors.lightCard,
+    text: isDark ? colors.textLight : colors.textDark,
+    textMuted: isDark ? colors.textMuted : colors.textMutedLight,
+    primary: colors.primary,
+    border: isDark ? colors.darkBorder : colors.lightBorder,
   };
   
   if (isLoading && months.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.bg }]}>
         <View style={styles.center}>
-          <Text style={[styles.text, { color: colors.textMuted }]}>Loading...</Text>
+          <Text style={[styles.text, { color: themeColors.textMuted }]}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -48,21 +62,29 @@ export default function HomeScreen() {
   
   if (months.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.bg }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Trading P&L
+          <Text style={[styles.title, { color: themeColors.text }]}>
+            TradeX
           </Text>
-          <TouchableOpacity 
-            onPress={toggleTheme}
-            style={[styles.themeButton, { backgroundColor: colors.card }]}
-          >
-            <Ionicons 
-              name={isDark ? 'sunny' : 'moon'} 
-              size={22} 
-              color={isDark ? '#FBBF24' : '#6366F1'} 
-            />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              onPress={toggleTheme}
+              style={[styles.iconButton, { backgroundColor: themeColors.card }]}
+            >
+              <Ionicons 
+                name={isDark ? 'sunny' : 'moon'} 
+                size={20} 
+                color={isDark ? '#FBBF24' : '#6366F1'} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleLogout}
+              style={[styles.iconButton, { backgroundColor: themeColors.card }]}
+            >
+              <Ionicons name="log-out-outline" size={20} color={themeColors.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
         <EmptyState
           title="Start Tracking"
@@ -76,7 +98,7 @@ export default function HomeScreen() {
   }
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.bg }]}>
       <ScrollView 
         style={styles.flex1}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -91,29 +113,37 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Trading P&L
+            <Text style={[styles.title, { color: themeColors.text }]}>
+              TradeX
             </Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              {formatMonthDisplay(currentMonthKey)}
+            <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>
+              Welcome to TradeX
             </Text>
           </View>
-          <TouchableOpacity 
-            onPress={toggleTheme}
-            style={[styles.themeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <Ionicons 
-              name={isDark ? 'sunny' : 'moon'} 
-              size={22} 
-              color={isDark ? '#FBBF24' : '#6366F1'} 
-            />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              onPress={toggleTheme}
+              style={[styles.iconButton, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
+            >
+              <Ionicons 
+                name={isDark ? 'sunny' : 'moon'} 
+                size={20} 
+                color={isDark ? '#FBBF24' : '#6366F1'} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleLogout}
+              style={[styles.iconButton, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
+            >
+              <Ionicons name="log-out-outline" size={20} color={themeColors.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
         
         {/* Current Month Card */}
         {currentMonth ? (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+            <Text style={[styles.sectionTitle, { color: themeColors.textMuted }]}>
               Current Month
             </Text>
             <MonthCard 
@@ -124,11 +154,11 @@ export default function HomeScreen() {
           </View>
         ) : (
           <TouchableOpacity 
-            style={[styles.addCard, { backgroundColor: colors.card, borderColor: colors.primary }]}
+            style={[styles.addCard, { backgroundColor: themeColors.card, borderColor: themeColors.primary }]}
             onPress={() => router.push('/add-month')}
           >
-            <Text style={[styles.addIcon, { color: colors.primary }]}>+</Text>
-            <Text style={[styles.addText, { color: colors.primary }]}>
+            <Text style={[styles.addIcon, { color: themeColors.primary }]}>+</Text>
+            <Text style={[styles.addText, { color: themeColors.primary }]}>
               Add {formatMonthDisplay(currentMonthKey)} Data
             </Text>
           </TouchableOpacity>
@@ -136,7 +166,7 @@ export default function HomeScreen() {
         
         {/* Overall Statistics */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textMuted }]}>
             Overall Statistics
           </Text>
           <View style={styles.statsRow}>
@@ -163,11 +193,11 @@ export default function HomeScreen() {
         {recentMonths.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              <Text style={[styles.sectionTitle, { color: themeColors.textMuted }]}>
                 Recent Months
               </Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
-                <Text style={[styles.link, { color: colors.primary }]}>See All</Text>
+                <Text style={[styles.link, { color: themeColors.primary }]}>See All</Text>
               </TouchableOpacity>
             </View>
             {recentMonths.map(month => (
@@ -181,14 +211,6 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
-      
-      {/* FAB */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => router.push('/add-month')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -216,6 +238,10 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -224,8 +250,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
-  themeButton: {
-    padding: 12,
+  iconButton: {
+    padding: 10,
     borderRadius: 50,
     borderWidth: 1,
   },
@@ -244,7 +270,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statsRow: {
     flexDirection: 'row',

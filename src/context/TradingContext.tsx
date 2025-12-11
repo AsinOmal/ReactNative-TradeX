@@ -1,8 +1,15 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { calculateOverallStats, getRecentMonths } from '../services/calculationService';
+import {
+  deleteMonthFromFirestore,
+  getMonths,
+  monthExistsInFirestore,
+  saveMonth as saveMonthToFirestore,
+  subscribeToMonths,
+} from '../services/firestoreService';
 import { generateAndSharePDF } from '../services/pdfService';
-import * as storageService from '../services/storageService';
 import { MonthRecord, OverallStats } from '../types';
+import { useAuth } from './AuthContext';
 
 interface TradingContextType {
   // State
@@ -21,11 +28,13 @@ interface TradingContextType {
   generatePDF: (monthId: string) => Promise<void>;
   getMonthById: (id: string) => MonthRecord | undefined;
   getRecentMonths: (limit?: number) => MonthRecord[];
+  monthExists: (monthKey: string) => Promise<boolean>;
 }
 
 const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
 export function TradingProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
   const [months, setMonths] = useState<MonthRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,16 +43,32 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   const activeMonth = months.find(m => m.status === 'active') || null;
   const stats = calculateOverallStats(months);
   
-  // Load months on mount
+  // Subscribe to real-time updates when user is authenticated
   useEffect(() => {
-    loadMonths();
-  }, []);
+    if (!isAuthenticated || !user) {
+      setMonths([]);
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    // Subscribe to real-time Firestore updates
+    const unsubscribe = subscribeToMonths(user.uid, (updatedMonths) => {
+      setMonths(updatedMonths);
+      setIsLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [isAuthenticated, user]);
   
   const loadMonths = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
       setError(null);
-      const data = await storageService.getAllMonths();
+      const data = await getMonths(user.uid);
       setMonths(data);
     } catch (err) {
       setError('Failed to load data');
@@ -51,62 +76,81 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
   
   const addMonth = useCallback(async (monthData: MonthRecord) => {
+    if (!user) throw new Error('Not authenticated');
+    
     try {
       setError(null);
-      const updated = await storageService.saveMonth(monthData);
-      setMonths(updated);
+      await saveMonthToFirestore(user.uid, {
+        ...monthData,
+        createdAt: Date.now(),
+      });
+      // State will update automatically via subscription
     } catch (err) {
       setError('Failed to save month');
       console.error('Add month error:', err);
       throw err;
     }
-  }, []);
+  }, [user]);
   
   const updateMonth = useCallback(async (id: string, updates: Partial<MonthRecord>) => {
+    if (!user) throw new Error('Not authenticated');
+    
     try {
       setError(null);
       const existing = months.find(m => m.id === id);
       if (!existing) throw new Error('Month not found');
       
-      const updated = await storageService.saveMonth({
+      await saveMonthToFirestore(user.uid, {
         ...existing,
         ...updates,
         updatedAt: Date.now(),
       });
-      setMonths(updated);
+      // State will update automatically via subscription
     } catch (err) {
       setError('Failed to update month');
       console.error('Update month error:', err);
       throw err;
     }
-  }, [months]);
+  }, [user, months]);
   
   const deleteMonthAction = useCallback(async (id: string) => {
+    if (!user) throw new Error('Not authenticated');
+    
     try {
       setError(null);
-      const updated = await storageService.deleteMonth(id);
-      setMonths(updated);
+      await deleteMonthFromFirestore(user.uid, id);
+      // State will update automatically via subscription
     } catch (err) {
       setError('Failed to delete month');
       console.error('Delete month error:', err);
       throw err;
     }
-  }, []);
+  }, [user]);
   
   const closeMonthAction = useCallback(async (id: string, endingCapital: number) => {
+    if (!user) throw new Error('Not authenticated');
+    
     try {
       setError(null);
-      const updated = await storageService.closeMonth(id, endingCapital);
-      setMonths(updated);
+      const existing = months.find(m => m.id === id);
+      if (!existing) throw new Error('Month not found');
+      
+      await saveMonthToFirestore(user.uid, {
+        ...existing,
+        endingCapital,
+        status: 'closed',
+        updatedAt: Date.now(),
+      });
+      // State will update automatically via subscription
     } catch (err) {
       setError('Failed to close month');
       console.error('Close month error:', err);
       throw err;
     }
-  }, []);
+  }, [user, months]);
   
   const generatePDF = useCallback(async (monthId: string) => {
     try {
@@ -129,6 +173,11 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     return getRecentMonths(months, limit);
   }, [months]);
   
+  const monthExistsAction = useCallback(async (monthKey: string) => {
+    if (!user) return false;
+    return monthExistsInFirestore(user.uid, monthKey);
+  }, [user]);
+  
   const value: TradingContextType = {
     months,
     activeMonth,
@@ -143,6 +192,7 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     generatePDF,
     getMonthById: getMonthByIdAction,
     getRecentMonths: getRecentMonthsAction,
+    monthExists: monthExistsAction,
   };
   
   return (
