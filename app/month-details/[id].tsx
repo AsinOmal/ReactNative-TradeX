@@ -84,11 +84,47 @@ export default function MonthDetailsScreen() {
     );
   }
   
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateField = (field: string, value: string) => {
+    let error = '';
+    const numValue = parseCurrency(value);
+
+    switch (field) {
+      case 'startingCapital':
+        if (!value) error = 'Required';
+        else if (numValue <= 0) error = 'Must be > 0';
+        break;
+      case 'endingCapital':
+        if (!value) error = 'Required';
+        else if (numValue < 0) error = 'Cannot be negative';
+        break;
+      case 'deposits':
+      case 'withdrawals':
+        if (value && numValue < 0) error = 'Cannot be negative';
+        break;
+    }
+
+    setErrors(prev => ({ ...prev, [field]: error }));
+    return !error;
+  };
+  
   const handleSave = async () => {
     const start = parseCurrency(startingCapital);
     const end = parseCurrency(endingCapital);
     const dep = parseCurrency(deposits);
     const with_ = parseCurrency(withdrawals);
+    
+    // Validate fields
+    const startValid = validateField('startingCapital', startingCapital);
+    const endValid = validateField('endingCapital', endingCapital);
+    const depValid = validateField('deposits', deposits);
+    const withValid = validateField('withdrawals', withdrawals);
+
+    if (!startValid || !endValid || !depValid || !withValid) {
+      Alert.alert('Validation Error', 'Please correct the errors in the form.');
+      return;
+    }
     
     const validation = validateMonthForm(start, end, dep, with_, month.month);
     if (!validation.isValid) {
@@ -169,28 +205,50 @@ export default function MonthDetailsScreen() {
             <>
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textMuted }]}>Starting Capital</Text>
-                <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.inputContainer, { 
+                    backgroundColor: colors.card, 
+                    borderColor: errors.startingCapital ? colors.loss : colors.border,
+                    borderWidth: errors.startingCapital ? 1 : 1
+                }]}>
                   <Text style={[styles.inputPrefix, { color: colors.textMuted }]}>$</Text>
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={startingCapital}
-                    onChangeText={(text) => setStartingCapital(formatCurrencyInput(text))}
+                    onChangeText={(text) => {
+                        setStartingCapital(formatCurrencyInput(text));
+                        if (errors.startingCapital) validateField('startingCapital', text);
+                    }}
+                    onBlur={() => validateField('startingCapital', startingCapital)}
                     keyboardType="decimal-pad"
                   />
                 </View>
+                {errors.startingCapital && (
+                  <Text style={{ color: colors.loss, fontSize: 12, marginTop: 4 }}>{errors.startingCapital}</Text>
+                )}
               </View>
               
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textMuted }]}>Ending Capital</Text>
-                <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[styles.inputContainer, { 
+                    backgroundColor: colors.card, 
+                    borderColor: errors.endingCapital ? colors.loss : colors.border,
+                    borderWidth: errors.endingCapital ? 1 : 1
+                }]}>
                   <Text style={[styles.inputPrefix, { color: colors.textMuted }]}>$</Text>
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={endingCapital}
-                    onChangeText={(text) => setEndingCapital(formatCurrencyInput(text))}
+                    onChangeText={(text) => {
+                        setEndingCapital(formatCurrencyInput(text));
+                        if (errors.endingCapital) validateField('endingCapital', text);
+                    }}
+                    onBlur={() => validateField('endingCapital', endingCapital)}
                     keyboardType="decimal-pad"
                   />
                 </View>
+                {errors.endingCapital && (
+                  <Text style={{ color: colors.loss, fontSize: 12, marginTop: 4 }}>{errors.endingCapital}</Text>
+                )}
               </View>
               
               <View style={styles.inputGroup}>

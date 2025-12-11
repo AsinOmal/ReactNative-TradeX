@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import 'react-native-get-random-values';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,11 +61,47 @@ export default function AddMonthScreen() {
     return null;
   }, [startingCapital, endingCapital, deposits, withdrawals]);
   
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateField = (field: string, value: string) => {
+    let error = '';
+    const numValue = parseCurrency(value);
+
+    switch (field) {
+      case 'startingCapital':
+        if (!value) error = 'Required';
+        else if (numValue <= 0) error = 'Must be > 0';
+        break;
+      case 'endingCapital':
+        if (!value) error = 'Required';
+        else if (numValue < 0) error = 'Cannot be negative';
+        break;
+      case 'deposits':
+      case 'withdrawals':
+        if (value && numValue < 0) error = 'Cannot be negative';
+        break;
+    }
+
+    setErrors(prev => ({ ...prev, [field]: error }));
+    return !error;
+  };
+
   const handleSave = async () => {
     const start = parseCurrency(startingCapital);
     const end = parseCurrency(endingCapital);
     const dep = parseCurrency(deposits);
     const with_ = parseCurrency(withdrawals);
+    
+    // Validate all fields
+    const startValid = validateField('startingCapital', startingCapital);
+    const endValid = validateField('endingCapital', endingCapital);
+    const depValid = validateField('deposits', deposits);
+    const withValid = validateField('withdrawals', withdrawals);
+
+    if (!startValid || !endValid || !depValid || !withValid) {
+      Alert.alert('Validation Error', 'Please correct the errors in the form.');
+      return;
+    }
     
     const validation = validateMonthForm(start, end, dep, with_, selectedMonth);
     if (!validation.isValid) {
@@ -151,31 +187,57 @@ export default function AddMonthScreen() {
             
             <View style={styles.inputRow}>
               <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Starting</Text>
-              <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
-                <TextInput
-                  style={[styles.input, { color: themeColors.text }]}
-                  value={startingCapital}
-                  onChangeText={(text) => setStartingCapital(formatCurrencyInput(text))}
-                  placeholder="0.00"
-                  placeholderTextColor={themeColors.textMuted}
-                  keyboardType="decimal-pad"
-                />
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <View style={[styles.inputField, { 
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  borderColor: errors.startingCapital ? colors.loss : 'transparent',
+                  borderWidth: 1
+                }]}>
+                  <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
+                  <TextInput
+                    style={[styles.input, { color: themeColors.text }]}
+                    value={startingCapital}
+                    onChangeText={(text) => {
+                      setStartingCapital(formatCurrencyInput(text));
+                      if (errors.startingCapital) validateField('startingCapital', text);
+                    }}
+                    onBlur={() => validateField('startingCapital', startingCapital)}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                {errors.startingCapital ? (
+                  <Text style={{ color: colors.loss, fontSize: 12, marginTop: 4 }}>{errors.startingCapital}</Text>
+                ) : null}
               </View>
             </View>
             
             <View style={styles.inputRow}>
               <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Ending</Text>
-              <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
-                <TextInput
-                  style={[styles.input, { color: themeColors.text }]}
-                  value={endingCapital}
-                  onChangeText={(text) => setEndingCapital(formatCurrencyInput(text))}
-                  placeholder="0.00"
-                  placeholderTextColor={themeColors.textMuted}
-                  keyboardType="decimal-pad"
-                />
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <View style={[styles.inputField, { 
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  borderColor: errors.endingCapital ? colors.loss : 'transparent',
+                  borderWidth: 1
+                }]}>
+                  <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
+                  <TextInput
+                    style={[styles.input, { color: themeColors.text }]}
+                    value={endingCapital}
+                    onChangeText={(text) => {
+                      setEndingCapital(formatCurrencyInput(text));
+                      if (errors.endingCapital) validateField('endingCapital', text);
+                    }}
+                    onBlur={() => validateField('endingCapital', endingCapital)}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                {errors.endingCapital ? (
+                  <Text style={{ color: colors.loss, fontSize: 12, marginTop: 4 }}>{errors.endingCapital}</Text>
+                ) : null}
               </View>
             </View>
           </View>
@@ -189,16 +251,18 @@ export default function AddMonthScreen() {
                 <Ionicons name="arrow-down-circle" size={16} color={colors.profit} />
                 <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Deposits</Text>
               </View>
-              <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
-                <TextInput
-                  style={[styles.input, { color: themeColors.text }]}
-                  value={deposits}
-                  onChangeText={(text) => setDeposits(formatCurrencyInput(text))}
-                  placeholder="0.00"
-                  placeholderTextColor={themeColors.textMuted}
-                  keyboardType="decimal-pad"
-                />
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
+                  <TextInput
+                    style={[styles.input, { color: themeColors.text }]}
+                    value={deposits}
+                    onChangeText={(text) => setDeposits(formatCurrencyInput(text))}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
               </View>
             </View>
             
@@ -207,16 +271,18 @@ export default function AddMonthScreen() {
                 <Ionicons name="arrow-up-circle" size={16} color={colors.loss} />
                 <Text style={[styles.inputLabel, { color: themeColors.textMuted }]}>Withdrawals</Text>
               </View>
-              <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
-                <TextInput
-                  style={[styles.input, { color: themeColors.text }]}
-                  value={withdrawals}
-                  onChangeText={(text) => setWithdrawals(formatCurrencyInput(text))}
-                  placeholder="0.00"
-                  placeholderTextColor={themeColors.textMuted}
-                  keyboardType="decimal-pad"
-                />
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={[styles.inputField, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                  <Text style={[styles.currencySymbol, { color: themeColors.textMuted }]}>$</Text>
+                  <TextInput
+                    style={[styles.input, { color: themeColors.text }]}
+                    value={withdrawals}
+                    onChangeText={(text) => setWithdrawals(formatCurrencyInput(text))}
+                    placeholder="0.00"
+                    placeholderTextColor={themeColors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
               </View>
             </View>
           </View>

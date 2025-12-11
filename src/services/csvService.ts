@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { MonthRecord } from '../types';
 import { formatMonthDisplay } from '../utils/dateUtils';
@@ -51,7 +51,7 @@ export async function generateAndShareCSV(months: MonthRecord[]): Promise<void> 
   
   // Write file
   await FileSystem.writeAsStringAsync(filePath, csvContent, {
-    encoding: FileSystem.EncodingType.UTF8,
+    encoding: 'utf8',
   });
   
   // Share file
@@ -60,6 +60,8 @@ export async function generateAndShareCSV(months: MonthRecord[]): Promise<void> 
       mimeType: 'text/csv',
       dialogTitle: 'Export Trading Data',
     });
+  } else {
+    throw new Error('Sharing is not available on this device');
   }
 }
 

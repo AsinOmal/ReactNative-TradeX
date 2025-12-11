@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../../src/config/fonts';
@@ -12,7 +12,19 @@ import { fontScale, scale, screenWidth } from '../../src/utils/scaling';
 
 export default function AnalyticsScreen() {
   const { isDark } = useTheme();
-  const { months, stats } = useTrading();
+  const { months, stats, loadMonths } = useTrading();
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadMonths();
+    } catch (error) {
+      console.error('Refresh failed', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
   
   const themeColors = {
     bg: isDark ? '#0A0A0A' : '#FAFAFA',
@@ -85,6 +97,9 @@ export default function AnalyticsScreen() {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: scale(140) }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />
+        }
       >
         {/* Header */}
         <View style={{ paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(24) }}>

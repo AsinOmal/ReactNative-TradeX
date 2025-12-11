@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -19,11 +20,23 @@ const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 export default function CalendarScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
-  const { months: monthRecords } = useTrading();
+  const { months: monthRecords, loadMonths } = useTrading();
   
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadMonths();
+    } catch (error) {
+      console.error('Refresh failed', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
   
   const themeColors = {
     bg: isDark ? '#0A0A0A' : '#FAFAFA',
@@ -94,7 +107,13 @@ export default function CalendarScreen() {
   
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: themeColors.bg }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(140) }}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: scale(140) }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />
+        }
+      >
         {/* Header */}
         <View style={{ paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) }}>
           <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(32), color: themeColors.text }}>Calendar</Text>

@@ -57,7 +57,11 @@ export default function SettingsScreen() {
     try {
       await generateAndShareCSV(months);
     } catch (err) {
-      Alert.alert('Error', 'Failed to export data.');
+      if (err instanceof Error) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Failed to export data.');
+      }
     }
   };
   
@@ -178,15 +182,9 @@ export default function SettingsScreen() {
               type="toggle" 
               value={isDark} 
               onPress={toggleTheme} 
-            />
-            <SettingItem 
-              icon="notifications" 
-              iconColor="#6366F1" 
-              label="Notifications" 
-              type="link" 
-              value="On" 
               showBorder={false}
             />
+
           </View>
         </View>
 

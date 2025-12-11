@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../src/components/EmptyState';
 import { fonts } from '../../src/config/fonts';
@@ -15,9 +16,49 @@ type FilterType = 'all' | 'profit' | 'loss';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { months } = useTrading();
+  const { months, deleteMonth, loadMonths } = useTrading();
   const { isDark } = useTheme();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Keep track of open swipeables to close them when others open
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadMonths();
+    } catch (error) {
+      console.error('Refresh failed', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDelete = (id: string, monthName: string) => {
+    // Close the swipeable row if it exists
+    const ref = swipeableRefs.current.get(id);
+    if (ref) ref.close();
+
+    Alert.alert(
+      'Delete Month',
+      `Are you sure you want to delete the record for ${monthName}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMonth(id);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete month');
+            }
+          }
+        },
+      ]
+    );
+  };
   
   const themeColors = {
     bg: isDark ? '#0A0A0A' : '#FAFAFA',
@@ -63,24 +104,6 @@ export default function HistoryScreen() {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
   };
   
-  if (months.length === 0) {
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: themeColors.bg }}>
-        <View style={{ paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) }}>
-          <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(32), color: themeColors.text }}>History</Text>
-          <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.textMuted, marginTop: scale(4) }}>Your trading records</Text>
-        </View>
-        <EmptyState
-          title="No History"
-          message="Your monthly trading records will appear here"
-          actionLabel="Add First Month"
-          onAction={() => router.push('/add-month')}
-          icon="📅"
-        />
-      </SafeAreaView>
-    );
-  }
-  
   const FilterButton = ({ type, label }: { type: FilterType; label: string }) => (
     <TouchableOpacity
       onPress={() => setFilter(type)}
@@ -108,6 +131,26 @@ export default function HistoryScreen() {
       </Text>
     </TouchableOpacity>
   );
+
+  const renderRightActions = (id: string, monthName: string) => {
+    return (
+      <TouchableOpacity
+        style={{
+          backgroundColor: '#EF4444',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: scale(80),
+          marginBottom: scale(10),
+          marginRight: scale(20), // Add margin to match card margin
+          borderTopRightRadius: scale(16),
+          borderBottomRightRadius: scale(16),
+        }}
+        onPress={() => handleDelete(id, monthName)}
+      >
+        <Ionicons name="trash-outline" size={scale(24)} color="#FFFFFF" />
+      </TouchableOpacity>
+    );
+  };
   
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: themeColors.bg }}>
@@ -147,91 +190,118 @@ export default function HistoryScreen() {
         <FilterButton type="loss" label="Losing" />
       </View>
       
-      {/* Months List Grouped by Year */}
-      <FlatList
-        data={years}
-        keyExtractor={(year) => year}
-        renderItem={({ item: year }) => (
-          <View style={{ marginBottom: scale(24) }}>
-            {/* Year Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(20), marginBottom: scale(12), gap: scale(12) }}>
-              <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: themeColors.text }}>{year}</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border }} />
-              <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>
-                {groupedByYear[year].length} months
+      {months.length === 0 ? (
+        <EmptyState
+          title="No History"
+          message="Your monthly trading records will appear here"
+          actionLabel="Add First Month"
+          onAction={() => router.push('/add-month')}
+          icon="📅"
+        />
+      ) : (
+        /* Months List Grouped by Year */
+        <FlatList
+          data={years}
+          keyExtractor={(year) => year}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.text} />
+          }
+          renderItem={({ item: year }) => (
+            <View style={{ marginBottom: scale(24) }}>
+              {/* Year Header */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(20), marginBottom: scale(12), gap: scale(12) }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: themeColors.text }}>{year}</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: themeColors.border }} />
+                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>
+                  {groupedByYear[year].length} months
+                </Text>
+              </View>
+              
+              {/* Month Cards */}
+              {groupedByYear[year].map((month) => (
+                <Swipeable
+                  key={month.id}
+                  ref={(ref) => {
+                    if (ref) swipeableRefs.current.set(month.id, ref);
+                    else swipeableRefs.current.delete(month.id);
+                  }}
+                  renderRightActions={() => renderRightActions(month.id, formatMonthDisplay(month.month))}
+                  onSwipeableWillOpen={() => {
+                      // Optional: Close other swipeables when one opens
+                      swipeableRefs.current.forEach((ref, key) => {
+                          if (key !== month.id) ref.close();
+                      });
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => router.push(`/month-details/${month.id}`)}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: themeColors.card,
+                      marginHorizontal: scale(20),
+                      marginBottom: scale(10),
+                      padding: scale(16),
+                      borderRadius: scale(16),
+                      borderWidth: 1,
+                      borderColor: themeColors.border,
+                    }}
+                  >
+                    {/* Month Icon */}
+                    <LinearGradient
+                      colors={month.netProfitLoss >= 0 ? ['#10B95F', '#059669'] : ['#EF4444', '#DC2626']}
+                      style={{ width: scale(44), height: scale(44), borderRadius: scale(12), justifyContent: 'center', alignItems: 'center', marginRight: scale(14) }}
+                    >
+                      <Ionicons 
+                        name={month.netProfitLoss >= 0 ? 'arrow-up' : 'arrow-down'} 
+                        size={scale(22)} 
+                        color="#FFFFFF" 
+                      />
+                    </LinearGradient>
+                    
+                    {/* Month Details */}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>
+                        {formatMonthDisplay(month.month)}
+                      </Text>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(13), color: themeColors.textMuted, marginTop: scale(2) }}>
+                        {month.status === 'closed' ? 'Closed' : 'Active'}
+                      </Text>
+                    </View>
+                    
+                    {/* P&L */}
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(17), color: month.netProfitLoss >= 0 ? colors.profit : colors.loss }}>
+                        {month.netProfitLoss >= 0 ? '+' : ''}{formatCurrency(month.netProfitLoss)}
+                      </Text>
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted, marginTop: scale(2) }}>
+                        {month.returnPercentage >= 0 ? '+' : ''}{month.returnPercentage.toFixed(1)}%
+                      </Text>
+                    </View>
+                    
+                    {/* Arrow */}
+                    <Ionicons name="chevron-forward" size={scale(18)} color={themeColors.textMuted} style={{ marginLeft: scale(8) }} />
+                  </TouchableOpacity>
+                </Swipeable>
+              ))}
+            </View>
+          )}
+          contentContainerStyle={{ paddingBottom: scale(140) }}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={{ alignItems: 'center', paddingVertical: scale(60), paddingHorizontal: scale(40) }}>
+              <Ionicons name="search" size={scale(48)} color={themeColors.textMuted} style={{ marginBottom: scale(16) }} />
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.text, marginBottom: scale(8), textAlign: 'center' }}>
+                No {filter === 'profit' ? 'winning' : 'losing'} months
+              </Text>
+              <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(14), color: themeColors.textMuted, textAlign: 'center' }}>
+                Try changing the filter
               </Text>
             </View>
-            
-            {/* Month Cards */}
-            {groupedByYear[year].map((month) => (
-              <TouchableOpacity
-                key={month.id}
-                onPress={() => router.push(`/month-details/${month.id}`)}
-                activeOpacity={0.7}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: themeColors.card,
-                  marginHorizontal: scale(20),
-                  marginBottom: scale(10),
-                  padding: scale(16),
-                  borderRadius: scale(16),
-                  borderWidth: 1,
-                  borderColor: themeColors.border,
-                }}
-              >
-                {/* Month Icon */}
-                <LinearGradient
-                  colors={month.netProfitLoss >= 0 ? ['#10B95F', '#059669'] : ['#EF4444', '#DC2626']}
-                  style={{ width: scale(44), height: scale(44), borderRadius: scale(12), justifyContent: 'center', alignItems: 'center', marginRight: scale(14) }}
-                >
-                  <Ionicons 
-                    name={month.netProfitLoss >= 0 ? 'arrow-up' : 'arrow-down'} 
-                    size={scale(22)} 
-                    color="#FFFFFF" 
-                  />
-                </LinearGradient>
-                
-                {/* Month Details */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>
-                    {formatMonthDisplay(month.month)}
-                  </Text>
-                  <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(13), color: themeColors.textMuted, marginTop: scale(2) }}>
-                    {month.status === 'closed' ? 'Closed' : 'Active'}
-                  </Text>
-                </View>
-                
-                {/* P&L */}
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(17), color: month.netProfitLoss >= 0 ? colors.profit : colors.loss }}>
-                    {month.netProfitLoss >= 0 ? '+' : ''}{formatCurrency(month.netProfitLoss)}
-                  </Text>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted, marginTop: scale(2) }}>
-                    {month.returnPercentage >= 0 ? '+' : ''}{month.returnPercentage.toFixed(1)}%
-                  </Text>
-                </View>
-                
-                {/* Arrow */}
-                <Ionicons name="chevron-forward" size={scale(18)} color={themeColors.textMuted} style={{ marginLeft: scale(8) }} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        contentContainerStyle={{ paddingBottom: scale(140) }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={{ alignItems: 'center', paddingVertical: scale(60), paddingHorizontal: scale(40) }}>
-            <Ionicons name="search" size={scale(48)} color={themeColors.textMuted} style={{ marginBottom: scale(16) }} />
-            <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.text, marginBottom: scale(8), textAlign: 'center' }}>
-              No {filter === 'profit' ? 'winning' : 'losing'} months
-            </Text>
-            <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(14), color: themeColors.textMuted, textAlign: 'center' }}>
-              Try changing the filter
-            </Text>
-          </View>
-        }
-      />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }

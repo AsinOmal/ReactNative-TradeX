@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { fontAssets, fonts } from '../src/config/fonts';
 import { colors } from '../src/config/theme';
@@ -130,6 +131,9 @@ function AuthenticatedLayout() {
   );
 }
 
+
+
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
 
@@ -149,13 +153,15 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <TradingProvider>
-          <AuthenticatedLayout />
-        </TradingProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <TradingProvider>
+            <AuthenticatedLayout />
+          </TradingProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
