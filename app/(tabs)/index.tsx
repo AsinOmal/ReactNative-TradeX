@@ -1,98 +1,300 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { EmptyState } from '../../src/components/EmptyState';
+import { MonthCard } from '../../src/components/MonthCard';
+import { StatCard } from '../../src/components/StatCard';
+import { useTheme } from '../../src/context/ThemeContext';
+import { useTrading } from '../../src/context/TradingContext';
+import { formatMonthDisplay, getMonthKey } from '../../src/utils/dateUtils';
+import { formatCurrency, formatPercentage } from '../../src/utils/formatters';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+  const router = useRouter();
+  const { months, stats, isLoading, loadMonths, getRecentMonths } = useTrading();
+  const { isDark, toggleTheme } = useTheme();
+  const [refreshing, setRefreshing] = React.useState(false);
+  
+  const recentMonths = getRecentMonths(3);
+  const currentMonthKey = getMonthKey();
+  const currentMonth = months.find(m => m.month === currentMonthKey);
+  
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadMonths();
+    setRefreshing(false);
+  }, [loadMonths]);
+  
+  const colors = {
+    bg: isDark ? '#0A0A0A' : '#FAFAFA',
+    card: isDark ? '#1F1F23' : '#F4F4F5',
+    text: isDark ? '#F4F4F5' : '#18181B',
+    textMuted: isDark ? '#71717A' : '#A1A1AA',
+    primary: '#6366F1',
+    border: isDark ? '#27272A' : '#E4E4E7',
+  };
+  
+  if (isLoading && months.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+        <View style={styles.center}>
+          <Text style={[styles.text, { color: colors.textMuted }]}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  if (months.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Trading P&L
+          </Text>
+          <TouchableOpacity 
+            onPress={toggleTheme}
+            style={[styles.themeButton, { backgroundColor: colors.card }]}
+          >
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
+              size={22} 
+              color={isDark ? '#FBBF24' : '#6366F1'} 
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          </TouchableOpacity>
+        </View>
+        <EmptyState
+          title="Start Tracking"
+          message="Add your first month to start tracking your trading performance"
+          actionLabel="Add First Month"
+          onAction={() => router.push('/add-month')}
+          icon="📈"
+        />
+      </SafeAreaView>
+    );
+  }
+  
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      <ScrollView 
+        style={styles.flex1}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#6366F1" 
+          />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Trading P&L
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+              {formatMonthDisplay(currentMonthKey)}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            onPress={toggleTheme}
+            style={[styles.themeButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
+              size={22} 
+              color={isDark ? '#FBBF24' : '#6366F1'} 
+            />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Current Month Card */}
+        {currentMonth ? (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              Current Month
+            </Text>
+            <MonthCard 
+              month={currentMonth} 
+              showFullDetails 
+              onPress={() => router.push(`/month-details/${currentMonth.id}`)}
+            />
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.addCard, { backgroundColor: colors.card, borderColor: colors.primary }]}
+            onPress={() => router.push('/add-month')}
+          >
+            <Text style={[styles.addIcon, { color: colors.primary }]}>+</Text>
+            <Text style={[styles.addText, { color: colors.primary }]}>
+              Add {formatMonthDisplay(currentMonthKey)} Data
+            </Text>
+          </TouchableOpacity>
+        )}
+        
+        {/* Overall Statistics */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+            Overall Statistics
+          </Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              title="Total P&L"
+              value={formatCurrency(stats.totalProfitLoss, true)}
+              valueColor={stats.totalProfitLoss >= 0 ? 'profit' : 'loss'}
+            />
+            <StatCard
+              title="Win Rate"
+              value={`${stats.winRate.toFixed(0)}%`}
+              subtitle={`${stats.profitableMonths}/${stats.totalMonths}`}
+              valueColor="primary"
+            />
+            <StatCard
+              title="Avg Return"
+              value={formatPercentage(stats.averageReturn, true)}
+              valueColor={stats.averageReturn >= 0 ? 'profit' : 'loss'}
+            />
+          </View>
+        </View>
+        
+        {/* Recent Months */}
+        {recentMonths.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                Recent Months
+              </Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
+                <Text style={[styles.link, { color: colors.primary }]}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            {recentMonths.map(month => (
+              <View key={month.id} style={styles.monthCardWrapper}>
+                <MonthCard
+                  month={month}
+                  onPress={() => router.push(`/month-details/${month.id}`)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+      
+      {/* FAB */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => router.push('/add-month')}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  flex1: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  themeButton: {
+    padding: 12,
+    borderRadius: 50,
+    borderWidth: 1,
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  addCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderStyle: 'dashed',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  addIcon: {
+    fontSize: 24,
+    marginRight: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  addText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  link: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  monthCardWrapper: {
+    marginBottom: 12,
+  },
+  fab: {
     position: 'absolute',
+    right: 20,
+    bottom: 90,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabText: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '300',
   },
 });
