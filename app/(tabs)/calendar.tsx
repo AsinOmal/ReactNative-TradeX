@@ -102,63 +102,118 @@ export default function CalendarScreen() {
         </View>
         
         {/* Year Selector with Integrated Streak */}
-        <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            backgroundColor: streak > 0 ? '#FFB800' : themeColors.card, 
-            borderRadius: scale(16), 
-            padding: scale(6), 
-            borderWidth: 1, 
-            borderColor: streak > 0 ? '#FFB800' : themeColors.border,
-            shadowColor: streak > 0 ? '#FFB800' : 'transparent',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: streak > 0 ? 0.3 : 0,
-            shadowRadius: 10,
-            elevation: streak > 0 ? 8 : 0,
-          }}>
-            <TouchableOpacity 
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: streak > 0 ? 'rgba(255,255,255,0.2)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'), justifyContent: 'center', alignItems: 'center' }}
-              onPress={() => setSelectedYear(y => y - 1)}
-            >
-              <Ionicons name="chevron-back" size={scale(22)} color={streak > 0 ? '#FFFFFF' : themeColors.text} />
-            </TouchableOpacity>
-            
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              {/* Main Row: Streak Number - Year - Fire Icon */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                {streak > 0 && (
-                  <View style={{ width: scale(40), alignItems: 'flex-end', marginRight: scale(16) }}>
-                    <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF', opacity: 0.9 }}>{streak}</Text>
-                  </View>
-                )}
-                
-                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(26), color: streak > 0 ? '#FFFFFF' : themeColors.text }}>{selectedYear}</Text>
-                
-                {streak > 0 && (
-                  <View style={{ width: scale(40), alignItems: 'flex-start', marginLeft: scale(16) }}>
-                    <Ionicons name="flame" size={scale(22)} color="#FFFFFF" style={{ opacity: 0.9 }} />
-                  </View>
-                )}
-              </View>
-              
-              {stats.total > 0 && (
-                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: streak > 0 ? 'rgba(255,255,255,0.9)' : (stats.totalPnL >= 0 ? colors.profit : colors.loss), marginTop: -scale(2) }}>
-                  {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
-                </Text>
-              )}
-            </View>
-            
-            <TouchableOpacity 
-              style={{ width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: streak > 0 ? 'rgba(255,255,255,0.2)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'), justifyContent: 'center', alignItems: 'center', opacity: selectedYear >= currentYear ? 0.4 : 1 }}
-              onPress={() => setSelectedYear(y => y + 1)}
-              disabled={selectedYear >= currentYear}
-            >
-              <Ionicons name="chevron-forward" size={scale(22)} color={streak > 0 ? '#FFFFFF' : themeColors.text} />
-            </TouchableOpacity>
-          </View>
+       <View className="px-5 mb-5">
+  <View 
+    className="flex-row items-center justify-between rounded-2xl py-3 px-3 border"
+    style={{
+      backgroundColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : themeColors.card,
+      borderColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : themeColors.border,
+      shadowColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : 'transparent',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: streak > 0 && selectedYear === currentYear ? 0.3 : 0,
+      shadowRadius: 10,
+      elevation: streak > 0 && selectedYear === currentYear ? 8 : 0,
+    }}
+  >
+    <View className="flex-row items-center gap-4">
+      <TouchableOpacity 
+        className={`
+          w-11 h-11 rounded-xl justify-center items-center
+          ${streak > 0 && selectedYear === currentYear
+            ? 'bg-white/20' 
+            : isDark 
+              ? 'bg-white/5' 
+              : 'bg-black/3'
+          }
+        `}
+        onPress={() => setSelectedYear(y => y - 1)}
+      >
+        <Ionicons 
+          name="chevron-back" 
+          size={scale(22)} 
+          color={streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text} 
+        />
+      </TouchableOpacity>
+      
+      {streak > 0 && selectedYear === currentYear && (
+        <View className="items-center justify-center px-2">
+          <Text 
+            style={{ fontFamily: fonts.bold, fontSize: fontScale(20) }}
+            className="text-white opacity-95"
+          >
+            {streak}
+          </Text>
         </View>
+      )}
+    </View>
+    
+    <View className="flex-1 items-center px-6">
+      <Text 
+        style={{ 
+          fontFamily: fonts.bold, 
+          fontSize: fontScale(26),
+          color: streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text 
+        }}
+        className="mb-1"
+      >
+        {selectedYear}
+      </Text>
+      
+      {stats.total > 0 && (
+        <Text 
+          style={{ 
+            fontFamily: fonts.medium, 
+            fontSize: fontScale(13),
+            color: streak > 0 && selectedYear === currentYear
+              ? 'rgba(255,255,255,0.95)' 
+              : (stats.totalPnL >= 0 ? colors.profit : colors.loss)
+          }}
+          className="mt-0.5"
+        >
+          {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { 
+            style: 'currency', 
+            currency: 'USD', 
+            maximumFractionDigits: 0 
+          })}
+        </Text>
+      )}
+    </View>
+    
+    <View className="flex-row items-center gap-4">
+      {streak > 0 && selectedYear === currentYear && (
+        <View className="items-center justify-center px-2">
+          <Ionicons 
+            name="flame" 
+            size={scale(24)} 
+            color="#FFFFFF" 
+            style={{ opacity: 0.95 }} 
+          />
+        </View>
+      )}
+      
+      <TouchableOpacity 
+        className={`
+          w-11 h-11 rounded-xl justify-center items-center
+          ${streak > 0 && selectedYear === currentYear
+            ? 'bg-white/20' 
+            : isDark 
+              ? 'bg-white/5' 
+              : 'bg-black/3'
+          }
+          ${selectedYear >= currentYear ? 'opacity-40' : 'opacity-100'}
+        `}
+        onPress={() => setSelectedYear(y => y + 1)}
+        disabled={selectedYear >= currentYear}
+      >
+        <Ionicons 
+          name="chevron-forward" 
+          size={scale(22)} 
+          color={streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text} 
+        />
+      </TouchableOpacity>
+    </View>
+  </View>
+</View>
         
         {/* Calendar Grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: scale(20), gap: scale(10) }}>
