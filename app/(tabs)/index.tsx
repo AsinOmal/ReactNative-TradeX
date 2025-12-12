@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../src/components/EmptyState';
 import { MonthCard } from '../../src/components/MonthCard';
 import { PrivacyAwareText } from '../../src/components/PrivacyAwareText';
+import { Skeleton, SkeletonHeroCard, SkeletonMonthCard } from '../../src/components/SkeletonLoader';
 import { fonts } from '../../src/config/fonts';
 import { useAuth } from '../../src/context/AuthContext';
 import { usePrivacy } from '../../src/context/PrivacyContext';
@@ -266,8 +267,22 @@ export default function HomeScreen() {
   if (isLoading && months.length === 0) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: themeColors.bg }}>
-        <View className="flex-1 justify-center items-center">
-          <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: themeColors.textMuted }}>Loading...</Text>
+        <View style={{ paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) }}>
+          <Skeleton width={120} height={16} borderRadius={4} />
+          <Skeleton width={180} height={32} borderRadius={6} style={{ marginTop: scale(8) }} />
+        </View>
+        
+        {/* Hero Card Skeleton */}
+        <View style={{ paddingHorizontal: scale(20), marginBottom: scale(20) }}>
+          <SkeletonHeroCard />
+        </View>
+        
+        {/* Month Cards Skeleton */}
+        <View style={{ paddingHorizontal: scale(20) }}>
+          <Skeleton width={140} height={18} borderRadius={4} style={{ marginBottom: scale(16) }} />
+          <SkeletonMonthCard />
+          <SkeletonMonthCard />
+          <SkeletonMonthCard />
         </View>
       </SafeAreaView>
     );
