@@ -52,22 +52,36 @@ export async function signInWithGoogle(): Promise<User> {
       throw new Error('Google Sign-In is not configured for this platform');
     }
     
-    // Configure Google Sign-In
-    GoogleSignin.configure({
-      webClientId: '910150341676-xxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your web client ID
-      iosClientId: '910150341676-c4ncqe2n8hv5o4nc6budoeaufdehu61t.apps.googleusercontent.com',
-    });
-    
-    // Get the user's ID token
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const { idToken } = await GoogleSignin.signIn();
-    
-    // Create a Google credential with the token
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-    
-    // Sign in with the credential
-    const userCredential = await signInWithCredential(auth, googleCredential);
-    return userCredential.user;
+    try {
+      // Configure Google Sign-In
+      GoogleSignin.configure({
+        iosClientId: '910150341676-c4ncqe2n8hv5o4nc6budoeaufdehu61t.apps.googleusercontent.com',
+        offlineAccess: true,
+      });
+      
+      // Check Play Services (Android only)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
+      
+      // Sign in with Google
+      const signInResult = await GoogleSignin.signIn();
+      const idToken = signInResult?.data?.idToken || signInResult?.idToken;
+      
+      if (!idToken) {
+        throw new Error('No ID token received from Google Sign-In');
+      }
+      
+      // Create a Google credential with the token
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      
+      // Sign in with the credential
+      const userCredential = await signInWithCredential(auth, googleCredential);
+      return userCredential.user;
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      throw error;
+    }
   }
 }
 
