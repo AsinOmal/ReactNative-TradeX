@@ -2,14 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -51,6 +52,34 @@ export default function LoginScreen() {
     } catch (err) {}
   };
   
+  const handleForgotPassword = () => {
+    Alert.prompt(
+      'Reset Password',
+      'Enter your email address to receive a password reset link.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: async (inputEmail) => {
+            if (!inputEmail?.trim()) {
+              Alert.alert('Error', 'Please enter your email address.');
+              return;
+            }
+            try {
+              const { resetPassword } = await import('../../src/services/authService');
+              await resetPassword(inputEmail.trim());
+              Alert.alert('Success', 'Password reset email sent! Check your inbox.');
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to send reset email.');
+            }
+          },
+        },
+      ],
+      'plain-text',
+      email,
+    );
+  };
+  
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView 
@@ -88,7 +117,7 @@ export default function LoginScreen() {
           </View>
           
           {/* Social Login */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: scale(16), marginBottom: scale(24) }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: scale(24) }}>
             <TouchableOpacity 
               style={{ 
                 width: scale(52), 
@@ -101,18 +130,6 @@ export default function LoginScreen() {
               onPress={handleGoogleLogin}
             >
               <Ionicons name="logo-google" size={scale(22)} color="#18181B" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ 
-                width: scale(52), 
-                height: scale(52), 
-                borderRadius: scale(14),
-                backgroundColor: '#F4F4F5',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Ionicons name="logo-apple" size={scale(22)} color="#18181B" />
             </TouchableOpacity>
           </View>
           
@@ -215,8 +232,8 @@ export default function LoginScreen() {
           </TouchableOpacity>
           
           {/* Forgot Password & Register */}
-          <View style={{ alignItems: 'center', gap: scale(16), marginTop: 'auto' }}>
-            <TouchableOpacity style={{ paddingVertical: scale(8) }}>
+          <View style={{ alignItems: 'center', gap: scale(16) }}>
+            <TouchableOpacity style={{ paddingVertical: scale(8) }} onPress={handleForgotPassword}>
               <Text style={{ fontSize: fontScale(14), fontWeight: '500', color: '#10B95F' }}>Forgot Password?</Text>
             </TouchableOpacity>
             

@@ -3,10 +3,11 @@ import {
     onAuthStateChanged as firebaseOnAuthStateChanged,
     signOut as firebaseSignOut,
     GoogleAuthProvider,
+    sendPasswordResetEmail,
     signInWithCredential,
     signInWithEmailAndPassword,
     signInWithPopup,
-    User,
+    User
 } from 'firebase/auth';
 import { Platform } from 'react-native';
 import { auth } from '../config/firebaseConfig';
@@ -56,7 +57,6 @@ export async function signInWithGoogle(): Promise<User> {
       // Configure Google Sign-In
       GoogleSignin.configure({
         iosClientId: '910150341676-c4ncqe2n8hv5o4nc6budoeaufdehu61t.apps.googleusercontent.com',
-        offlineAccess: true,
       });
       
       // Check Play Services (Android only)
@@ -113,6 +113,13 @@ export function getCurrentUser(): User | null {
  */
 export function onAuthStateChanged(callback: (user: User | null) => void): () => void {
   return firebaseOnAuthStateChanged(auth, callback);
+}
+
+/**
+ * Send password reset email
+ */
+export async function resetPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
 }
 
 /**
