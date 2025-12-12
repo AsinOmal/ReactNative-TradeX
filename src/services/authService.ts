@@ -55,6 +55,7 @@ export async function signInWithGoogle(): Promise<User> {
     // Configure Google Sign-In
     GoogleSignin.configure({
       webClientId: '910150341676-xxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your web client ID
+      iosClientId: '910150341676-c4ncqe2n8hv5o4nc6budoeaufdehu61t.apps.googleusercontent.com',
     });
     
     // Get the user's ID token

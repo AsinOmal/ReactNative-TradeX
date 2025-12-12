@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../../src/config/fonts';
@@ -142,118 +143,150 @@ export default function CalendarScreen() {
         </View>
         
         {/* Year Selector with Integrated Streak */}
-       <View className="px-5 mb-5">
-  <View 
-    className="flex-row items-center justify-between rounded-2xl py-3 px-3 border"
-    style={{
-      backgroundColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : themeColors.card,
-      borderColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : themeColors.border,
-      shadowColor: streak > 0 && selectedYear === currentYear ? '#FF9500' : 'transparent',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: streak > 0 && selectedYear === currentYear ? 0.3 : 0,
-      shadowRadius: 10,
-      elevation: streak > 0 && selectedYear === currentYear ? 8 : 0,
-    }}
-  >
-    <View className="flex-row items-center gap-4">
-      <TouchableOpacity 
-        className={`
-          w-11 h-11 rounded-xl justify-center items-center
-          ${streak > 0 && selectedYear === currentYear
-            ? 'bg-white/20' 
-            : isDark 
-              ? 'bg-white/5' 
-              : 'bg-black/3'
-          }
-        `}
-        onPress={() => setSelectedYear(y => y - 1)}
-      >
-        <Ionicons 
-          name="chevron-back" 
-          size={scale(22)} 
-          color={streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text} 
-        />
-      </TouchableOpacity>
-      
-      {streak > 0 && selectedYear === currentYear && (
-        <View className="items-center justify-center px-2">
-          <Text 
-            style={{ fontFamily: fonts.bold, fontSize: fontScale(20) }}
-            className="text-white opacity-95"
+       <View style={{ paddingHorizontal: scale(20), marginBottom: scale(20) }}>
+        {streak > 0 && selectedYear === currentYear ? (
+          /* Streak Mode - Premium Gradient Design */
+          <LinearGradient
+            colors={['#F59E0B', '#D97706', '#B45309']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: scale(20),
+              padding: scale(4),
+              shadowColor: '#F59E0B',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.4,
+              shadowRadius: 16,
+              elevation: 10,
+            }}
           >
-            {streak}
-          </Text>
-        </View>
-      )}
-    </View>
-    
-    <View className="flex-1 items-center px-6">
-      <Text 
-        style={{ 
-          fontFamily: fonts.bold, 
-          fontSize: fontScale(26),
-          color: streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text 
-        }}
-        className="mb-1"
-      >
-        {selectedYear}
-      </Text>
-      
-      {stats.total > 0 && (
-        <Text 
-          style={{ 
-            fontFamily: fonts.medium, 
-            fontSize: fontScale(13),
-            color: streak > 0 && selectedYear === currentYear
-              ? 'rgba(255,255,255,0.95)' 
-              : (stats.totalPnL >= 0 ? colors.profit : colors.loss)
-          }}
-          className="mt-0.5"
-        >
-          {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { 
-            style: 'currency', 
-            currency: 'USD', 
-            maximumFractionDigits: 0 
-          })}
-        </Text>
-      )}
-    </View>
-    
-    <View className="flex-row items-center gap-4">
-      {streak > 0 && selectedYear === currentYear && (
-        <View className="items-center justify-center px-2">
-          <Ionicons 
-            name="flame" 
-            size={scale(24)} 
-            color="#FFFFFF" 
-            style={{ opacity: 0.95 }} 
-          />
-        </View>
-      )}
-      
-      <TouchableOpacity 
-        className={`
-          w-11 h-11 rounded-xl justify-center items-center
-          ${streak > 0 && selectedYear === currentYear
-            ? 'bg-white/20' 
-            : isDark 
-              ? 'bg-white/5' 
-              : 'bg-black/3'
-          }
-          ${selectedYear >= currentYear ? 'opacity-40' : 'opacity-100'}
-        `}
-        onPress={() => setSelectedYear(y => y + 1)}
-        disabled={selectedYear >= currentYear}
-      >
-        <Ionicons 
-          name="chevron-forward" 
-          size={scale(22)} 
-          color={streak > 0 && selectedYear === currentYear ? '#FFFFFF' : themeColors.text} 
-        />
-      </TouchableOpacity>
-    </View>
-  </View>
-</View>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              paddingVertical: scale(12),
+              paddingHorizontal: scale(8),
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
+                <TouchableOpacity 
+                  onPress={() => setSelectedYear(y => y - 1)}
+                  style={{
+                    width: scale(40),
+                    height: scale(40),
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="chevron-back" size={scale(28)} color="#FFFFFF" />
+                </TouchableOpacity>
+                
+                <View style={{
+                  backgroundColor: 'rgba(255,255,255,0.25)',
+                  paddingHorizontal: scale(14),
+                  paddingVertical: scale(8),
+                  borderRadius: scale(10),
+                }}>
+                  <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: '#FFFFFF' }}>{streak}</Text>
+                </View>
+              </View>
+              
+              {/* Center - Year + P&L */}
+              <View style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(28), color: '#FFFFFF', letterSpacing: 1 }}>{selectedYear}</Text>
+                {stats.total > 0 && (
+                  <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(14), color: 'rgba(255,255,255,0.9)', marginTop: scale(2) }}>
+                    {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+                  </Text>
+                )}
+              </View>
+              
+              {/* Right - Fire Icon + Forward Arrow */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
+                <View style={{
+                  backgroundColor: 'rgba(255,255,255,0.25)',
+                  width: scale(44),
+                  height: scale(44),
+                  borderRadius: scale(12),
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name="flame" size={scale(22)} color="#FFFFFF" />
+                </View>
+                
+                <TouchableOpacity 
+                  onPress={() => setSelectedYear(y => y + 1)}
+                  disabled={selectedYear >= currentYear}
+                  style={{
+                    width: scale(40),
+                    height: scale(40),
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    opacity: selectedYear >= currentYear ? 0.4 : 1,
+                  }}
+                >
+                  <Ionicons name="chevron-forward" size={scale(28)} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+        ) : (
+          /* Normal Mode - Clean Card Design */
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: themeColors.card,
+            borderRadius: scale(20),
+            paddingVertical: scale(16),
+            paddingHorizontal: scale(12),
+            borderWidth: 1,
+            borderColor: themeColors.border,
+          }}>
+            {/* Left - Back Arrow */}
+            <TouchableOpacity 
+              onPress={() => setSelectedYear(y => y - 1)}
+              style={{
+                width: scale(40),
+                height: scale(40),
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Ionicons name="chevron-back" size={scale(28)} color={themeColors.text} />
+            </TouchableOpacity>
+            
+            {/* Center - Year + P&L */}
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(28), color: themeColors.text, letterSpacing: 1 }}>{selectedYear}</Text>
+              {stats.total > 0 && (
+                <Text style={{ 
+                  fontFamily: fonts.semiBold, 
+                  fontSize: fontScale(14), 
+                  color: stats.totalPnL >= 0 ? colors.profit : colors.loss,
+                  marginTop: scale(2),
+                }}>
+                  {stats.totalPnL >= 0 ? '+' : ''}{stats.totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}
+                </Text>
+              )}
+            </View>
+            
+            {/* Right - Forward Arrow */}
+            <TouchableOpacity 
+              onPress={() => setSelectedYear(y => y + 1)}
+              disabled={selectedYear >= currentYear}
+              style={{
+                width: scale(40),
+                height: scale(40),
+                justifyContent: 'center',
+                alignItems: 'center',
+                opacity: selectedYear >= currentYear ? 0.4 : 1,
+              }}
+            >
+              <Ionicons name="chevron-forward" size={scale(28)} color={themeColors.text} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
         
         {/* Calendar Grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: scale(20), gap: scale(10) }}>
