@@ -1,4 +1,4 @@
-import { ChartDataPoint, MonthRecord, OverallStats } from '../types';
+import { ChartDataPoint, MonthRecord, OverallStats, Trade } from '../types';
 import { getMonthName, getShortMonthLabel, getYear, sortMonthsAsc } from '../utils/dateUtils';
 
 //!Calculate all derived fields for a month
@@ -116,6 +116,132 @@ export function calculateOverallStats(months: MonthRecord[]): OverallStats {
     averageWin: profitableMonths > 0 ? totalProfit / profitableMonths : 0,
     averageLoss: (months.length - profitableMonths) > 0 ? totalLoss / (months.length - profitableMonths) : 0,
     profitFactor: totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? Infinity : 0,
+  };
+}
+
+/**
+ * Calculate combined stats from months and trades with double-counting prevention.
+ * For each month: if trades exist for that month, use trade P&L; otherwise use month's manual P&L.
+ */
+export function calculateCombinedStats(
+  months: MonthRecord[],
+  trades: Trade[]
+): OverallStats & { tradeMonths: string[]; tradeTotalPnL: number } {
+  // Group trades by month
+  const tradesByMonth: Record<string, Trade[]> = {};
+  for (const trade of trades) {
+    if (!tradesByMonth[trade.monthKey]) {
+      tradesByMonth[trade.monthKey] = [];
+    }
+    tradesByMonth[trade.monthKey].push(trade);
+  }
+  
+  // Calculate P&L for each month (trades take priority)
+  const monthsWithTradeKeys = Object.keys(tradesByMonth);
+  let totalProfitLoss = 0;
+  let totalProfit = 0;
+  let totalLoss = 0;
+  let totalReturn = 0;
+  let profitableMonths = 0;
+  let bestMonth: MonthRecord | null = null;
+  let worstMonth: MonthRecord | null = null;
+  let tradeTotalPnL = 0;
+  
+  // Set of month keys we've already counted
+  const countedMonths = new Set<string>();
+  
+  // First, process months that have trades
+  for (const monthKey of monthsWithTradeKeys) {
+    countedMonths.add(monthKey);
+    const monthTrades = tradesByMonth[monthKey];
+    const monthPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
+    tradeTotalPnL += monthPnL;
+    totalProfitLoss += monthPnL;
+    
+    if (monthPnL > 0) {
+      totalProfit += monthPnL;
+      profitableMonths++;
+    } else if (monthPnL < 0) {
+      totalLoss += Math.abs(monthPnL);
+    }
+    
+    // Find matching month record for best/worst comparison
+    const existingMonth = months.find(m => m.month === monthKey);
+    const virtualMonth: MonthRecord = existingMonth || {
+      id: monthKey,
+      month: monthKey,
+      year: parseInt(monthKey.split('-')[0]),
+      monthName: '',
+      startingCapital: 0,
+      endingCapital: monthPnL,
+      deposits: 0,
+      withdrawals: 0,
+      grossChange: monthPnL,
+      netProfitLoss: monthPnL,
+      returnPercentage: 0,
+      pnlSource: 'trades',
+      status: 'closed',
+      notes: '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    
+    // Override P&L with trade P&L for comparison
+    const compareMonth = { ...virtualMonth, netProfitLoss: monthPnL };
+    
+    if (!bestMonth || monthPnL > bestMonth.netProfitLoss) {
+      bestMonth = compareMonth;
+    }
+    if (!worstMonth || monthPnL < worstMonth.netProfitLoss) {
+      worstMonth = compareMonth;
+    }
+    
+    // Calculate return if we have starting capital
+    if (existingMonth && existingMonth.startingCapital > 0) {
+      totalReturn += (monthPnL / existingMonth.startingCapital) * 100;
+    }
+  }
+  
+  // Then, add months that don't have trades (manual P&L)
+  for (const month of months) {
+    if (!countedMonths.has(month.month)) {
+      countedMonths.add(month.month);
+      totalProfitLoss += month.netProfitLoss;
+      totalReturn += month.returnPercentage;
+      
+      if (month.netProfitLoss > 0) {
+        totalProfit += month.netProfitLoss;
+        profitableMonths++;
+      } else if (month.netProfitLoss < 0) {
+        totalLoss += Math.abs(month.netProfitLoss);
+      }
+      
+      if (!bestMonth || month.netProfitLoss > bestMonth.netProfitLoss) {
+        bestMonth = month;
+      }
+      if (!worstMonth || month.netProfitLoss < worstMonth.netProfitLoss) {
+        worstMonth = month;
+      }
+    }
+  }
+  
+  const totalMonthsCount = countedMonths.size;
+  
+  return {
+    totalProfitLoss,
+    totalProfit,
+    totalLoss,
+    averageReturn: totalMonthsCount > 0 ? totalReturn / totalMonthsCount : 0,
+    bestMonth,
+    worstMonth,
+    profitableMonths,
+    totalMonths: totalMonthsCount,
+    winRate: totalMonthsCount > 0 ? (profitableMonths / totalMonthsCount) * 100 : 0,
+    averageWin: profitableMonths > 0 ? totalProfit / profitableMonths : 0,
+    averageLoss: (totalMonthsCount - profitableMonths) > 0 ? totalLoss / (totalMonthsCount - profitableMonths) : 0,
+    profitFactor: totalLoss > 0 ? totalProfit / totalLoss : totalProfit > 0 ? Infinity : 0,
+    tradeMonths: monthsWithTradeKeys,
+    tradeTotalPnL,
   };
 }
 

@@ -18,7 +18,7 @@ import { fontScale, scale, screenWidth } from '../../src/utils/scaling';
 export default function AnalyticsScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
-  const { months, stats, loadMonths, yearlyGoal, setYearlyGoal } = useTrading();
+  const { months, stats, loadMonths, yearlyGoal, setYearlyGoal, trades, tradeStats } = useTrading();
   const { togglePrivacyMode, isPrivacyMode } = usePrivacy();
   const [refreshing, setRefreshing] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number, y: number, value: number, index: number } | null>(null);
@@ -585,6 +585,105 @@ export default function AnalyticsScreen() {
                 </View>
               )}
             </View>
+            )}
+
+            {/* Trade Performance Section */}
+            {trades.length > 0 && (
+              <View style={{ paddingHorizontal: scale(20), marginTop: scale(20) }}>
+                <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(17), color: themeColors.text, marginBottom: scale(12) }}>Individual Trades</Text>
+                
+                {/* Trade Stats Summary */}
+                <View style={{ backgroundColor: themeColors.card, borderRadius: scale(20), padding: scale(20), marginBottom: scale(12), borderWidth: 1, borderColor: themeColors.border }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(16) }}>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(24), color: tradeStats.totalPnL >= 0 ? colors.profit : colors.loss }}>
+                        {tradeStats.totalPnL >= 0 ? '+' : ''}{formatCurrency(tradeStats.totalPnL)}
+                      </Text>
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted }}>Total Trade P&L</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(24), color: themeColors.text }}>{tradeStats.totalTrades}</Text>
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted }}>Trades</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(24), color: themeColors.text }}>{tradeStats.winRate.toFixed(0)}%</Text>
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted }}>Win Rate</Text>
+                    </View>
+                  </View>
+                  
+                  {/* Win/Loss Progress Bar */}
+                  <View style={{ flexDirection: 'row', height: scale(8), borderRadius: scale(4), overflow: 'hidden', gap: 2 }}>
+                    <View style={{ flex: tradeStats.winningTrades || 0.5, backgroundColor: colors.profit, borderRadius: scale(4) }} />
+                    <View style={{ flex: tradeStats.losingTrades || 0.5, backgroundColor: colors.loss, borderRadius: scale(4) }} />
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: scale(6) }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: themeColors.textMuted }}>{tradeStats.winningTrades} Wins</Text>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: themeColors.textMuted }}>{tradeStats.losingTrades} Losses</Text>
+                  </View>
+                </View>
+                
+                {/* Streaks */}
+                {(tradeStats.longestWinStreak >= 3 || tradeStats.longestLoseStreak >= 3) && (
+                  <View style={{ backgroundColor: themeColors.card, borderRadius: scale(16), padding: scale(16), marginBottom: scale(12), borderWidth: 1, borderColor: themeColors.border }}>
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(14), color: themeColors.text, marginBottom: scale(12) }}>Streaks</Text>
+                    <View style={{ flexDirection: 'row', gap: scale(12) }}>
+                      <View style={{ flex: 1, backgroundColor: 'rgba(16, 185, 95, 0.1)', borderRadius: scale(12), padding: scale(12), alignItems: 'center' }}>
+                        <Ionicons name="flame" size={scale(20)} color={colors.profit} />
+                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: colors.profit, marginTop: scale(4) }}>{tradeStats.longestWinStreak}</Text>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: themeColors.textMuted }}>Best Win Streak</Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: scale(12), padding: scale(12), alignItems: 'center' }}>
+                        <Ionicons name="snow" size={scale(20)} color={colors.loss} />
+                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: colors.loss, marginTop: scale(4) }}>{tradeStats.longestLoseStreak}</Text>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: themeColors.textMuted }}>Worst Lose Streak</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                
+                {/* Best & Worst Trades */}
+                {tradeStats.bestTrade && (
+                  <View style={{ backgroundColor: themeColors.card, borderRadius: scale(16), padding: scale(16), marginBottom: scale(12), borderWidth: 1, borderColor: themeColors.border }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <LinearGradient
+                        colors={['#10B95F', '#059669']}
+                        style={{ width: scale(48), height: scale(48), borderRadius: scale(14), justifyContent: 'center', alignItems: 'center', marginRight: scale(14) }}
+                      >
+                        <Ionicons name="trending-up" size={scale(24)} color="#FFFFFF" />
+                      </LinearGradient>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>Best Trade</Text>
+                        <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>{tradeStats.bestTrade.symbol}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: colors.profit }}>+{formatCurrency(tradeStats.bestTrade.pnl)}</Text>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted }}>+{tradeStats.bestTrade.returnPercentage.toFixed(1)}%</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                
+                {tradeStats.worstTrade && (
+                  <View style={{ backgroundColor: themeColors.card, borderRadius: scale(16), padding: scale(16), borderWidth: 1, borderColor: themeColors.border }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <LinearGradient
+                        colors={['#EF4444', '#DC2626']}
+                        style={{ width: scale(48), height: scale(48), borderRadius: scale(14), justifyContent: 'center', alignItems: 'center', marginRight: scale(14) }}
+                      >
+                        <Ionicons name="trending-down" size={scale(24)} color="#FFFFFF" />
+                      </LinearGradient>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>Worst Trade</Text>
+                        <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>{tradeStats.worstTrade.symbol}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: colors.loss }}>{formatCurrency(tradeStats.worstTrade.pnl)}</Text>
+                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: themeColors.textMuted }}>{tradeStats.worstTrade.returnPercentage.toFixed(1)}%</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
             )}
       </ScrollView>
 

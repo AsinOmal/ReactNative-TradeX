@@ -231,7 +231,7 @@ Consistency is the key to success. You're proving it!
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { months, stats, isLoading, loadMonths, getRecentMonths } = useTrading();
+  const { months, stats, isLoading, loadMonths, getRecentMonths, trades, getTradesByMonth } = useTrading();
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
@@ -445,8 +445,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Getting Started Guide - Show when no months */}
-        {months.length === 0 && (
+        {/* Getting Started Guide - Show when no months AND no trades */}
+        {months.length === 0 && trades.length === 0 && (
           <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
             <LinearGradient
               colors={isDark ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(16, 185, 95, 0.1)', 'rgba(16, 185, 95, 0.02)']}
@@ -614,35 +614,43 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
           <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: themeColors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: scale(12) }}>Quick Actions</Text>
-          <View style={{ flexDirection: 'row', gap: scale(12) }}>
+          <View style={{ flexDirection: 'row', gap: scale(10), flexWrap: 'wrap' }}>
             <TouchableOpacity 
               onPress={() => router.push('/add-month')}
-              style={{ flex: 1, backgroundColor: 'rgba(16, 185, 95, 0.15)', borderRadius: scale(16), padding: scale(16), alignItems: 'center', gap: scale(10) }}
+              style={{ flex: 1, minWidth: '45%', backgroundColor: 'rgba(16, 185, 95, 0.15)', borderRadius: scale(16), padding: scale(14), alignItems: 'center', gap: scale(8) }}
             >
-              <Ionicons name="add-circle" size={scale(32)} color="#10B95F" style={{ opacity: 0.9 }} />
-              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: '#10B95F' }}>Add Month</Text>
+              <Ionicons name="calendar" size={scale(28)} color="#10B95F" style={{ opacity: 0.9 }} />
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(12), color: '#10B95F' }}>Add Month</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => router.push('/add-trade')}
+              style={{ flex: 1, minWidth: '45%', backgroundColor: 'rgba(251, 146, 60, 0.15)', borderRadius: scale(16), padding: scale(14), alignItems: 'center', gap: scale(8) }}
+            >
+              <Ionicons name="swap-horizontal" size={scale(28)} color="#FB923C" style={{ opacity: 0.9 }} />
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(12), color: '#FB923C' }}>Add Trade</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               onPress={() => router.push('/compare')}
-              style={{ flex: 1, backgroundColor: 'rgba(99, 102, 241, 0.15)', borderRadius: scale(16), padding: scale(16), alignItems: 'center', gap: scale(10) }}
+              style={{ flex: 1, minWidth: '45%', backgroundColor: 'rgba(99, 102, 241, 0.15)', borderRadius: scale(16), padding: scale(14), alignItems: 'center', gap: scale(8) }}
             >
-              <Ionicons name="git-compare" size={scale(32)} color="#6366F1" style={{ opacity: 0.9 }} />
-              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: '#6366F1' }}>Compare</Text>
+              <Ionicons name="git-compare" size={scale(28)} color="#6366F1" style={{ opacity: 0.9 }} />
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(12), color: '#6366F1' }}>Compare</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               onPress={() => setShowAIInsights(true)}
-              style={{ flex: 1, backgroundColor: 'rgba(225, 29, 72, 0.15)', borderRadius: scale(16), padding: scale(16), alignItems: 'center', gap: scale(10) }}
+              style={{ flex: 1, minWidth: '45%', backgroundColor: 'rgba(225, 29, 72, 0.15)', borderRadius: scale(16), padding: scale(14), alignItems: 'center', gap: scale(8) }}
             >
-              <Ionicons name="sparkles" size={scale(32)} color="#E11D48" style={{ opacity: 0.9 }} />
-              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: '#E11D48' }}>AI Insights</Text>
+              <Ionicons name="sparkles" size={scale(28)} color="#E11D48" style={{ opacity: 0.9 }} />
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(12), color: '#E11D48' }}>AI Insights</Text>
             </TouchableOpacity>
           </View>
         </View>
         
-        {/* Current Month or Add Current Month */}
-        {currentMonth ? (
+        {/* Current Month - only show if exists */}
+        {currentMonth && (
           <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
             <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: themeColors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: scale(12) }}>
               This Month
@@ -651,59 +659,8 @@ export default function HomeScreen() {
               month={currentMonth} 
               showFullDetails 
               onPress={() => router.push(`/month-details/${currentMonth.id}`)}
+              tradeCount={getTradesByMonth(currentMonth.month).length}
             />
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
-            <TouchableOpacity 
-              activeOpacity={0.9}
-              onPress={() => router.push('/add-month')}
-            >
-              <LinearGradient
-                colors={isDark ? ['rgba(16, 185, 95, 0.1)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(16, 185, 95, 0.12)', 'rgba(16, 185, 95, 0.05)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ 
-                  borderRadius: scale(20), 
-                  padding: scale(2),
-                  borderWidth: 1,
-                  borderColor: 'rgba(16, 185, 95, 0.2)',
-                  borderStyle: 'dashed'
-                }}
-              >
-                  <View style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      padding: scale(18),
-                      gap: scale(12)
-                  }}>
-                    <View style={{ 
-                        width: scale(40), 
-                        height: scale(40), 
-                        borderRadius: scale(20), 
-                        backgroundColor: '#10B95F', 
-                        justifyContent: 'center', 
-                        alignItems: 'center',
-                        shadowColor: "#10B95F",
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.2,
-                        shadowRadius: 8,
-                        elevation: 4
-                    }}>
-                        <Ionicons name="add" size={scale(24)} color="#FFFFFF" />
-                    </View>
-                    <View>
-                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(16), color: themeColors.text }}>
-                            Add {formatMonthDisplay(currentMonthKey)} Data
-                        </Text>
-                        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>
-                            Track your performance
-                        </Text>
-                    </View>
-                  </View>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
         )}
         
@@ -723,6 +680,7 @@ export default function HomeScreen() {
                 <MonthCard
                   month={month}
                   onPress={() => router.push(`/month-details/${month.id}`)}
+                  tradeCount={getTradesByMonth(month.month).length}
                 />
               </View>
             ))}

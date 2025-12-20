@@ -25,6 +25,16 @@ import { createTradeRecord } from '../src/services/tradeCalculationService';
 import { TradeFormInput } from '../src/types';
 import { fontScale, scale } from '../src/utils/scaling';
 
+// Input styles helper
+const getInputStyles = (isDark: boolean) => ({
+  bg: isDark ? '#09090B' : '#FFFFFF',
+  card: isDark ? '#18181B' : '#F4F4F5',
+  cardBorder: isDark ? '#27272A' : '#E4E4E7',
+  text: isDark ? '#FFFFFF' : '#18181B',
+  textMuted: isDark ? '#71717A' : '#A1A1AA',
+  inputBg: isDark ? '#27272A' : '#FFFFFF',
+});
+
 export default function AddTradeScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
@@ -47,14 +57,7 @@ export default function AddTradeScreen() {
   const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
   const [showExitDatePicker, setShowExitDatePicker] = useState(false);
   
-  const themeColors = {
-    bg: isDark ? '#09090B' : '#FFFFFF',
-    card: isDark ? '#18181B' : '#F4F4F5',
-    cardBorder: isDark ? '#27272A' : '#E4E4E7',
-    text: isDark ? '#FFFFFF' : '#18181B',
-    textMuted: isDark ? '#71717A' : '#A1A1AA',
-    inputBg: isDark ? '#27272A' : '#FFFFFF',
-  };
+  const themeColors = getInputStyles(isDark);
   
   // Parse date string to Date object
   const parseDate = (dateStr: string) => {
@@ -141,101 +144,6 @@ export default function AddTradeScreen() {
     }
   };
   
-  const InputField = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder,
-    keyboardType = 'default',
-    multiline = false,
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    placeholder?: string;
-    keyboardType?: 'default' | 'numeric' | 'decimal-pad';
-    multiline?: boolean;
-  }) => (
-    <View style={{ marginBottom: scale(16) }}>
-      <Text style={{
-        fontFamily: fonts.semiBold,
-        fontSize: fontScale(12),
-        color: themeColors.textMuted,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: scale(8),
-      }}>
-        {label}
-      </Text>
-      <TextInput
-        style={{
-          backgroundColor: themeColors.inputBg,
-          borderRadius: scale(12),
-          borderWidth: 1,
-          borderColor: themeColors.cardBorder,
-          padding: scale(14),
-          fontFamily: fonts.regular,
-          fontSize: fontScale(16),
-          color: themeColors.text,
-          minHeight: multiline ? scale(80) : undefined,
-          textAlignVertical: multiline ? 'top' : undefined,
-        }}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={themeColors.textMuted}
-        keyboardType={keyboardType}
-        multiline={multiline}
-      />
-    </View>
-  );
-  
-  // Date picker button component
-  const DatePickerField = ({ 
-    label, 
-    value, 
-    onPress 
-  }: { 
-    label: string; 
-    value: string; 
-    onPress: () => void;
-  }) => (
-    <View style={{ marginBottom: scale(16) }}>
-      <Text style={{
-        fontFamily: fonts.semiBold,
-        fontSize: fontScale(12),
-        color: themeColors.textMuted,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: scale(8),
-      }}>
-        {label}
-      </Text>
-      <TouchableOpacity
-        onPress={onPress}
-        style={{
-          backgroundColor: themeColors.inputBg,
-          borderRadius: scale(12),
-          borderWidth: 1,
-          borderColor: themeColors.cardBorder,
-          padding: scale(14),
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Text style={{
-          fontFamily: fonts.regular,
-          fontSize: fontScale(15),
-          color: themeColors.text,
-        }}>
-          {formatDateDisplay(value)}
-        </Text>
-        <Ionicons name="calendar-outline" size={scale(18)} color={themeColors.textMuted} />
-      </TouchableOpacity>
-    </View>
-  );
-  
   // iOS Date Picker Modal
   const renderIOSDatePicker = (
     show: boolean, 
@@ -286,6 +194,28 @@ export default function AddTradeScreen() {
       </View>
     </Modal>
   );
+  
+  // Input label style
+  const labelStyle = {
+    fontFamily: fonts.semiBold,
+    fontSize: fontScale(12),
+    color: themeColors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1,
+    marginBottom: scale(8),
+  };
+  
+  // Input field style
+  const inputStyle = {
+    backgroundColor: themeColors.inputBg,
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: themeColors.cardBorder,
+    padding: scale(14),
+    fontFamily: fonts.regular,
+    fontSize: fontScale(16),
+    color: themeColors.text,
+  };
   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.bg }} edges={['top']}>
@@ -345,25 +275,20 @@ export default function AddTradeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Symbol */}
-          <InputField
-            label="Symbol"
-            value={form.symbol}
-            onChangeText={(text) => setForm({ ...form, symbol: text.toUpperCase() })}
-            placeholder="e.g., AAPL, BTC"
-          />
+          <View style={{ marginBottom: scale(16) }}>
+            <Text style={labelStyle}>Symbol</Text>
+            <TextInput
+              style={inputStyle}
+              value={form.symbol}
+              onChangeText={(text) => setForm({ ...form, symbol: text.toUpperCase() })}
+              placeholder="e.g., AAPL, BTC"
+              placeholderTextColor={themeColors.textMuted}
+            />
+          </View>
           
           {/* Trade Type Toggle */}
           <View style={{ marginBottom: scale(16) }}>
-            <Text style={{
-              fontFamily: fonts.semiBold,
-              fontSize: fontScale(12),
-              color: themeColors.textMuted,
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              marginBottom: scale(8),
-            }}>
-              Trade Type
-            </Text>
+            <Text style={labelStyle}>Trade Type</Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               {(['long', 'short'] as const).map((type) => (
                 <TouchableOpacity
@@ -403,52 +328,96 @@ export default function AddTradeScreen() {
           
           {/* Dates Row */}
           <View style={{ flexDirection: 'row', gap: scale(12) }}>
-            <View style={{ flex: 1 }}>
-              <DatePickerField
-                label="Entry Date"
-                value={form.entryDate}
+            <View style={{ flex: 1, marginBottom: scale(16) }}>
+              <Text style={labelStyle}>Entry Date</Text>
+              <TouchableOpacity
                 onPress={() => setShowEntryDatePicker(true)}
-              />
+                style={{
+                  ...inputStyle,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.text }}>
+                  {formatDateDisplay(form.entryDate)}
+                </Text>
+                <Ionicons name="calendar-outline" size={scale(18)} color={themeColors.textMuted} />
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1 }}>
-              <DatePickerField
-                label="Exit Date"
-                value={form.exitDate}
+            <View style={{ flex: 1, marginBottom: scale(16) }}>
+              <Text style={labelStyle}>Exit Date</Text>
+              <TouchableOpacity
                 onPress={() => setShowExitDatePicker(true)}
-              />
+                style={{
+                  ...inputStyle,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.text }}>
+                  {formatDateDisplay(form.exitDate)}
+                </Text>
+                <Ionicons name="calendar-outline" size={scale(18)} color={themeColors.textMuted} />
+              </TouchableOpacity>
             </View>
           </View>
           
           {/* Prices Row */}
           <View style={{ flexDirection: 'row', gap: scale(12) }}>
-            <View style={{ flex: 1 }}>
-              <InputField
-                label="Entry Price"
+            <View style={{ flex: 1, marginBottom: scale(16) }}>
+              <Text style={labelStyle}>Entry Price</Text>
+              <TextInput
+                style={inputStyle}
                 value={form.entryPrice}
-                onChangeText={(text) => setForm({ ...form, entryPrice: text })}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9.]/g, '');
+                  // Only allow one decimal point
+                  const parts = cleaned.split('.');
+                  const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                  setForm({ ...form, entryPrice: valid });
+                }}
                 placeholder="0.00"
+                placeholderTextColor={themeColors.textMuted}
                 keyboardType="decimal-pad"
               />
             </View>
-            <View style={{ flex: 1 }}>
-              <InputField
-                label="Exit Price"
+            <View style={{ flex: 1, marginBottom: scale(16) }}>
+              <Text style={labelStyle}>Exit Price</Text>
+              <TextInput
+                style={inputStyle}
                 value={form.exitPrice}
-                onChangeText={(text) => setForm({ ...form, exitPrice: text })}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9.]/g, '');
+                  const parts = cleaned.split('.');
+                  const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                  setForm({ ...form, exitPrice: valid });
+                }}
                 placeholder="0.00"
+                placeholderTextColor={themeColors.textMuted}
                 keyboardType="decimal-pad"
               />
             </View>
           </View>
           
           {/* Quantity */}
-          <InputField
-            label="Quantity"
-            value={form.quantity}
-            onChangeText={(text) => setForm({ ...form, quantity: text })}
-            placeholder="0"
-            keyboardType="decimal-pad"
-          />
+          <View style={{ marginBottom: scale(16) }}>
+            <Text style={labelStyle}>Quantity</Text>
+            <TextInput
+              style={inputStyle}
+              value={form.quantity}
+              onChangeText={(text) => {
+                const cleaned = text.replace(/[^0-9.]/g, '');
+                const parts = cleaned.split('.');
+                const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                setForm({ ...form, quantity: valid });
+              }}
+              placeholder="0"
+              placeholderTextColor={themeColors.textMuted}
+              keyboardType="decimal-pad"
+            />
+          </View>
           
           {/* P&L Preview */}
           {form.entryPrice && form.exitPrice && form.quantity && (
@@ -485,21 +454,29 @@ export default function AddTradeScreen() {
           )}
           
           {/* Tags */}
-          <InputField
-            label="Tags (comma separated)"
-            value={form.tags}
-            onChangeText={(text) => setForm({ ...form, tags: text })}
-            placeholder="e.g., swing, earnings, breakout"
-          />
+          <View style={{ marginBottom: scale(16) }}>
+            <Text style={labelStyle}>Tags (comma separated)</Text>
+            <TextInput
+              style={inputStyle}
+              value={form.tags}
+              onChangeText={(text) => setForm({ ...form, tags: text })}
+              placeholder="e.g., swing, earnings, breakout"
+              placeholderTextColor={themeColors.textMuted}
+            />
+          </View>
           
           {/* Notes */}
-          <InputField
-            label="Notes"
-            value={form.notes}
-            onChangeText={(text) => setForm({ ...form, notes: text })}
-            placeholder="Trade notes, observations..."
-            multiline
-          />
+          <View style={{ marginBottom: scale(16) }}>
+            <Text style={labelStyle}>Notes</Text>
+            <TextInput
+              style={{ ...inputStyle, minHeight: scale(80), textAlignVertical: 'top' }}
+              value={form.notes}
+              onChangeText={(text) => setForm({ ...form, notes: text })}
+              placeholder="Trade notes, observations..."
+              placeholderTextColor={themeColors.textMuted}
+              multiline
+            />
+          </View>
           
           {/* Extra padding for keyboard */}
           <View style={{ height: scale(80) }} />

@@ -3,15 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import 'react-native-get-random-values';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ import { validateMonthForm } from '../src/utils/validators';
 
 export default function AddMonthScreen() {
   const router = useRouter();
-  const { months, addMonth, monthExists } = useTrading();
+  const { months, addMonth, monthExists, getTradesByMonth } = useTrading();
   const { isDark } = useTheme();
   
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey());
@@ -43,6 +43,10 @@ export default function AddMonthScreen() {
   const { user } = useAuth();
   
   const existingMonths = months.map((m) => m.month);
+  
+  // Check if selected month has trades
+  const tradesForMonth = getTradesByMonth(selectedMonth);
+  const hasTradesForMonth = tradesForMonth.length > 0;
   
   const calculations = useMemo(() => {
     const start = parseCurrency(startingCapital);
@@ -199,6 +203,31 @@ export default function AddMonthScreen() {
               <Ionicons name="chevron-forward" size={20} color={themeColors.textMuted} />
             </TouchableOpacity>
           </View>
+          
+          {/* Warning if month has trades */}
+          {hasTradesForMonth && (
+            <View style={{
+              backgroundColor: 'rgba(251, 191, 36, 0.1)',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(251, 191, 36, 0.3)',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 12,
+            }}>
+              <Ionicons name="warning" size={24} color="#FBBF24" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: fonts.semiBold, fontSize: 14, color: '#FBBF24', marginBottom: 4 }}>
+                  This month has {tradesForMonth.length} trade{tradesForMonth.length > 1 ? 's' : ''}
+                </Text>
+                <Text style={{ fontFamily: fonts.regular, fontSize: 13, color: themeColors.textMuted, lineHeight: 18 }}>
+                  Trade P&L will be used for this month's stats. Manual P&L entry here will be ignored to prevent double-counting.
+                </Text>
+              </View>
+            </View>
+          )}
           
           {/* Capital Card */}
           <View style={[styles.card, { backgroundColor: themeColors.card }]}>

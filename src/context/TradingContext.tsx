@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { calculateOverallStats, getRecentMonths } from '../services/calculationService';
+import { calculateCombinedStats, getRecentMonths } from '../services/calculationService';
 import {
     deleteMonthFromFirestore,
     deleteTradeFromFirestore,
@@ -73,7 +73,9 @@ export function TradingProvider({ children }: { children: ReactNode }) {
   
   // Derived state
   const activeMonth = months.find(m => m.status === 'active') || null;
-  const stats = calculateOverallStats(months);
+  // Use combined stats: trades take priority for months with trades, otherwise use manual P&L
+  const combinedStats = calculateCombinedStats(months, trades);
+  const stats: OverallStats = combinedStats;
   const tradeStats = calculateTradeStats(trades);
   
   // Subscribe to real-time updates when user is authenticated
@@ -106,6 +108,38 @@ export function TradingProvider({ children }: { children: ReactNode }) {
       unsubscribeTrades();
     };
   }, [isAuthenticated, user]);
+
+  // Auto-recalculate P&L for months with pnlSource='trades' when trades change
+  useEffect(() => {
+    if (!user || months.length === 0 || trades.length === 0) return;
+    
+    // Find months that use trades as P&L source
+    const tradeMonths = months.filter(m => m.pnlSource === 'trades');
+    if (tradeMonths.length === 0) return;
+    
+    // Recalculate each trade-based month
+    tradeMonths.forEach(async (month) => {
+      const monthTrades = trades.filter(t => t.monthKey === month.month);
+      const totalPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
+      
+      // Only update if P&L changed
+      if (Math.abs(totalPnL - month.netProfitLoss) > 0.01) {
+        const newEndingCapital = month.startingCapital + totalPnL + month.deposits - month.withdrawals;
+        try {
+          await saveMonthToFirestore(user.uid, {
+            ...month,
+            endingCapital: newEndingCapital,
+            netProfitLoss: totalPnL,
+            grossChange: newEndingCapital - month.startingCapital,
+            returnPercentage: month.startingCapital > 0 ? (totalPnL / month.startingCapital) * 100 : 0,
+            updatedAt: Date.now(),
+          });
+        } catch (error) {
+          console.error('Auto-recalculate P&L error:', error);
+        }
+      }
+    });
+  }, [trades, months, user]);
 
   const [yearlyGoal, setUserYearlyGoal] = useState<number>(0);
   const [displayName, setUserDisplayName] = useState<string>('');

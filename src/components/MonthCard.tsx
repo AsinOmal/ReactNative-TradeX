@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
@@ -9,9 +10,10 @@ interface MonthCardProps {
   month: MonthRecord;
   onPress?: () => void;
   showFullDetails?: boolean;
+  tradeCount?: number;
 }
 
-export function MonthCard({ month, onPress, showFullDetails = false }: MonthCardProps) {
+export function MonthCard({ month, onPress, showFullDetails = false, tradeCount = 0 }: MonthCardProps) {
   const { isDark } = useTheme();
   const isProfit = month.netProfitLoss >= 0;
   
@@ -29,9 +31,41 @@ export function MonthCard({ month, onPress, showFullDetails = false }: MonthCard
   const content = (
     <View style={[styles.container, { backgroundColor: colors.bg, borderColor: colors.border }]}>
       <View style={styles.header}>
-        <Text style={[styles.monthTitle, { color: colors.text }]}>
-          {formatMonthDisplay(month.month)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={[styles.monthTitle, { color: colors.text }]}>
+            {formatMonthDisplay(month.month)}
+          </Text>
+          {/* Trade Count Badge */}
+          {tradeCount > 0 && (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(16, 185, 95, 0.1)',
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 10,
+              gap: 4,
+            }}>
+              <Ionicons name="swap-horizontal" size={12} color="#10B95F" />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#10B95F' }}>
+                {tradeCount}
+              </Text>
+            </View>
+          )}
+          {/* P&L Source Badge */}
+          {month.pnlSource === 'trades' && (
+            <View style={{
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 6,
+            }}>
+              <Text style={{ fontSize: 9, fontWeight: '600', color: colors.primary }}>
+                AUTO
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={[
           styles.statusBadge, 
           { backgroundColor: month.status === 'active' ? 'rgba(99, 102, 241, 0.2)' : colors.statusBg }
