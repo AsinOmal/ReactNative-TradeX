@@ -685,6 +685,76 @@ export default function AnalyticsScreen() {
                 )}
               </View>
             )}
+            
+            {/* Symbol Performance */}
+            {trades.length > 0 && (() => {
+              // Group trades by symbol and calculate P&L
+              const symbolPnL: Record<string, { pnl: number; trades: number; wins: number }> = {};
+              trades.forEach(trade => {
+                if (!symbolPnL[trade.symbol]) {
+                  symbolPnL[trade.symbol] = { pnl: 0, trades: 0, wins: 0 };
+                }
+                symbolPnL[trade.symbol].pnl += trade.pnl;
+                symbolPnL[trade.symbol].trades++;
+                if (trade.pnl > 0) symbolPnL[trade.symbol].wins++;
+              });
+              
+              // Sort by P&L descending
+              const sortedSymbols = Object.entries(symbolPnL)
+                .sort((a, b) => b[1].pnl - a[1].pnl);
+              
+              if (sortedSymbols.length === 0) return null;
+              
+              return (
+                <View style={{ marginTop: scale(24) }}>
+                  <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(13), color: themeColors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: scale(12) }}>
+                    Symbol Performance
+                  </Text>
+                  <View style={{ backgroundColor: themeColors.card, borderRadius: scale(16), padding: scale(16), borderWidth: 1, borderColor: themeColors.border }}>
+                    {sortedSymbols.slice(0, 5).map(([symbol, data], idx) => (
+                      <View key={symbol} style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        paddingVertical: scale(12),
+                        borderBottomWidth: idx < sortedSymbols.slice(0, 5).length - 1 ? 1 : 0,
+                        borderBottomColor: themeColors.border,
+                      }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
+                          <View style={{
+                            width: scale(40),
+                            height: scale(40),
+                            borderRadius: scale(12),
+                            backgroundColor: data.pnl >= 0 ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}>
+                            <Ionicons 
+                              name={data.pnl >= 0 ? 'trending-up' : 'trending-down'} 
+                              size={scale(20)} 
+                              color={data.pnl >= 0 ? colors.profit : colors.loss} 
+                            />
+                          </View>
+                          <View>
+                            <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(16), color: themeColors.text }}>{symbol}</Text>
+                            <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: themeColors.textMuted }}>
+                              {data.trades} trade{data.trades !== 1 ? 's' : ''} • {((data.wins / data.trades) * 100).toFixed(0)}% win
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={{ 
+                          fontFamily: fonts.bold, 
+                          fontSize: fontScale(16), 
+                          color: data.pnl >= 0 ? colors.profit : colors.loss 
+                        }}>
+                          {data.pnl >= 0 ? '+' : ''}${Math.abs(data.pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
       </ScrollView>
 
       {/* Goal Input Modal */}

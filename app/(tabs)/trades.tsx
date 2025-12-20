@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    RefreshControl,
+    ScrollView,
     Text,
     TouchableOpacity,
     View,
@@ -20,8 +23,9 @@ type FilterType = 'all' | 'wins' | 'losses';
 export default function TradesScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
-  const { trades, tradeStats, isLoadingTrades } = useTrading();
+  const { trades, tradeStats, isLoadingTrades, loadMonths } = useTrading();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [refreshing, setRefreshing] = useState(false);
   
   const themeColors = {
     bg: isDark ? '#09090B' : '#FFFFFF',
@@ -31,12 +35,18 @@ export default function TradesScreen() {
     textMuted: isDark ? '#71717A' : '#A1A1AA',
   };
   
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadMonths();
+    setRefreshing(false);
+  };
+  
   // Filter trades
   const filteredTrades = trades.filter(trade => {
     if (filter === 'wins') return trade.pnl > 0;
     if (filter === 'losses') return trade.pnl < 0;
     return true;
-  });
+  }).sort((a, b) => new Date(b.exitDate).getTime() - new Date(a.exitDate).getTime());
   
   // Format date
   const formatDate = (dateStr: string) => {
@@ -55,7 +65,6 @@ export default function TradesScreen() {
     const streak = tradeStats.currentStreak;
     const count = Math.abs(streak);
     
-    // Only show streak badge if 3 or more consecutive wins/losses
     if (count < 3) return null;
     
     const isWin = streak > 0;
@@ -196,59 +205,86 @@ export default function TradesScreen() {
   
   // Empty state
   const renderEmptyState = () => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: scale(40) }}>
-      <View style={{
-        width: scale(80),
-        height: scale(80),
-        borderRadius: scale(40),
-        backgroundColor: 'rgba(16, 185, 95, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: scale(24),
-      }}>
-        <Ionicons name="swap-horizontal" size={scale(36)} color="#10B95F" />
-      </View>
-      <Text style={{
-        fontFamily: fonts.bold,
-        fontSize: fontScale(22),
-        color: themeColors.text,
-        textAlign: 'center',
-        marginBottom: scale(8),
-      }}>
-        No Trades Yet
-      </Text>
-      <Text style={{
-        fontFamily: fonts.regular,
-        fontSize: fontScale(15),
-        color: themeColors.textMuted,
-        textAlign: 'center',
-        lineHeight: fontScale(22),
-        marginBottom: scale(24),
-      }}>
-        Start logging your trades to track performance and see win/loss streaks.
-      </Text>
-      <TouchableOpacity
-        onPress={() => router.push('/add-trade')}
-        style={{
-          backgroundColor: '#10B95F',
-          paddingVertical: scale(14),
-          paddingHorizontal: scale(28),
-          borderRadius: scale(14),
-          flexDirection: 'row',
+    <ScrollView 
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: scale(20), paddingTop: scale(40) }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB923C" />}
+    >
+      <LinearGradient
+        colors={isDark ? ['rgba(251, 146, 60, 0.12)', 'rgba(251, 146, 60, 0.03)'] : ['rgba(251, 146, 60, 0.08)', 'rgba(251, 146, 60, 0.02)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ 
+          borderRadius: scale(24),
+          padding: scale(28),
+          borderWidth: 1,
+          borderColor: 'rgba(251, 146, 60, 0.15)',
           alignItems: 'center',
-          gap: scale(8),
         }}
       >
-        <Ionicons name="add" size={scale(20)} color="#FFFFFF" />
-        <Text style={{
-          fontFamily: fonts.bold,
-          fontSize: fontScale(16),
-          color: '#FFFFFF',
+        {/* Glowing Icon Container */}
+        <View style={{ 
+          width: scale(72), 
+          height: scale(72), 
+          borderRadius: scale(22), 
+          backgroundColor: '#FB923C',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: scale(20),
+          shadowColor: '#FB923C',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.6,
+          shadowRadius: 20,
+          elevation: 10,
         }}>
-          Add First Trade
+          <Ionicons name="swap-horizontal" size={scale(36)} color="#FFFFFF" />
+        </View>
+        
+        <Text style={{ 
+          fontFamily: fonts.bold, 
+          fontSize: fontScale(24), 
+          color: themeColors.text, 
+          marginBottom: scale(10),
+          textAlign: 'center',
+        }}>
+          No Trades Yet
         </Text>
-      </TouchableOpacity>
-    </View>
+        
+        <Text style={{ 
+          fontFamily: fonts.regular, 
+          fontSize: fontScale(15), 
+          color: themeColors.textMuted, 
+          lineHeight: fontScale(24), 
+          textAlign: 'center',
+          marginBottom: scale(28),
+          paddingHorizontal: scale(10),
+        }}>
+          Log individual trades to track performance, analyze by symbol, and see win/loss streaks.
+        </Text>
+        
+        <TouchableOpacity
+          onPress={() => router.push('/add-trade')}
+          style={{ width: '100%' }}
+        >
+          <LinearGradient
+            colors={['#FB923C', '#F97316']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              paddingVertical: scale(15),
+              borderRadius: scale(14),
+              alignItems: 'center',
+              shadowColor: '#FB923C',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: '#FFFFFF' }}>Add First Trade</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </LinearGradient>
+    </ScrollView>
   );
   
   return (
@@ -269,152 +305,151 @@ export default function TradesScreen() {
         }}>
           Trades
         </Text>
-        <TouchableOpacity
-          onPress={() => router.push('/add-trade')}
-          style={{
-            width: scale(44),
-            height: scale(44),
-            borderRadius: scale(14),
-            backgroundColor: '#10B95F',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Ionicons name="add" size={scale(24)} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
       
       {isLoadingTrades ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#10B95F" />
+          <ActivityIndicator size="large" color="#FB923C" />
         </View>
       ) : trades.length === 0 ? (
         renderEmptyState()
       ) : (
-        <>
-          {/* Stats Card */}
-          <View style={{
-            marginHorizontal: scale(20),
-            marginBottom: scale(16),
-            backgroundColor: themeColors.card,
-            borderRadius: scale(16),
-            padding: scale(16),
-            borderWidth: 1,
-            borderColor: themeColors.cardBorder,
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(12) }}>
-              <Text style={{
-                fontFamily: fonts.semiBold,
-                fontSize: fontScale(14),
-                color: themeColors.textMuted,
-              }}>
-                Performance
-              </Text>
-              {renderStreakBadge()}
-            </View>
-            
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={{
-                  fontFamily: fonts.bold,
-                  fontSize: fontScale(24),
-                  color: tradeStats.totalPnL >= 0 ? '#10B95F' : '#EF4444',
-                }}>
-                  {formatCurrency(tradeStats.totalPnL)}
-                </Text>
-                <Text style={{
-                  fontFamily: fonts.regular,
-                  fontSize: fontScale(12),
-                  color: themeColors.textMuted,
-                }}>
-                  Total P&L
-                </Text>
-              </View>
-              
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{
-                  fontFamily: fonts.bold,
-                  fontSize: fontScale(24),
-                  color: themeColors.text,
-                }}>
-                  {tradeStats.winRate.toFixed(0)}%
-                </Text>
-                <Text style={{
-                  fontFamily: fonts.regular,
-                  fontSize: fontScale(12),
-                  color: themeColors.textMuted,
-                }}>
-                  Win Rate
-                </Text>
-              </View>
-              
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{
-                  fontFamily: fonts.bold,
-                  fontSize: fontScale(24),
-                  color: themeColors.text,
-                }}>
-                  {tradeStats.totalTrades}
-                </Text>
-                <Text style={{
-                  fontFamily: fonts.regular,
-                  fontSize: fontScale(12),
-                  color: themeColors.textMuted,
-                }}>
-                  Trades
-                </Text>
-              </View>
-            </View>
-          </View>
-          
-          {/* Filter Bar */}
-          <View style={{
-            flexDirection: 'row',
+        <FlatList
+          data={filteredTrades}
+          renderItem={renderTradeCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
             paddingHorizontal: scale(20),
-            marginBottom: scale(16),
-            gap: scale(8),
-          }}>
-            {(['all', 'wins', 'losses'] as FilterType[]).map((f) => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                style={{
-                  paddingVertical: scale(8),
-                  paddingHorizontal: scale(16),
-                  borderRadius: scale(20),
-                  backgroundColor: filter === f 
-                    ? (f === 'wins' ? 'rgba(16, 185, 95, 0.15)' : f === 'losses' ? 'rgba(239, 68, 68, 0.15)' : themeColors.card)
-                    : 'transparent',
-                  borderWidth: 1,
-                  borderColor: filter === f ? 'transparent' : themeColors.cardBorder,
-                }}
-              >
-                <Text style={{
-                  fontFamily: fonts.medium,
-                  fontSize: fontScale(13),
-                  color: filter === f 
-                    ? (f === 'wins' ? '#10B95F' : f === 'losses' ? '#EF4444' : themeColors.text)
-                    : themeColors.textMuted,
-                  textTransform: 'capitalize',
-                }}>
-                  {f} {f === 'wins' ? `(${tradeStats.winningTrades})` : f === 'losses' ? `(${tradeStats.losingTrades})` : `(${tradeStats.totalTrades})`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          {/* Trade List */}
-          <FlatList
-            data={filteredTrades}
-            renderItem={renderTradeCard}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{
-              paddingHorizontal: scale(20),
-              paddingBottom: scale(120),
-            }}
-            showsVerticalScrollIndicator={false}
-          />
-        </>
+            paddingBottom: scale(120),
+          }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FB923C" />}
+          ListHeaderComponent={() => (
+            <>
+              {/* Hero P&L Card */}
+              <View style={{ marginBottom: scale(20) }}>
+                <LinearGradient
+                  colors={tradeStats.totalPnL >= 0 ? ['#FB923C', '#F97316'] : ['#EF4444', '#DC2626']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ 
+                    borderRadius: scale(24), 
+                    padding: scale(24), 
+                    overflow: 'hidden',
+                    shadowColor: tradeStats.totalPnL >= 0 ? '#FB923C' : '#EF4444',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.5,
+                    shadowRadius: 20,
+                    elevation: 12
+                  }}
+                >
+                  {/* Decorative circles */}
+                  <View style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                  <View style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                  
+                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: 'rgba(255,255,255,0.8)', marginBottom: scale(4) }}>Total Trade P&L</Text>
+                  <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(38), color: '#FFFFFF', marginBottom: scale(16) }}>
+                    {formatCurrency(tradeStats.totalPnL)}
+                  </Text>
+                  
+                  <View style={{ flexDirection: 'row', gap: scale(24) }}>
+                    <View>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Win Rate</Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>{tradeStats.winRate.toFixed(0)}%</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Trades</Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>{tradeStats.totalTrades}</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Profit Factor</Text>
+                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>
+                        {tradeStats.profitFactor === Infinity ? '∞' : tradeStats.profitFactor.toFixed(1)}x
+                      </Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </View>
+              
+              {/* Streak Badge */}
+              {Math.abs(tradeStats.currentStreak) >= 3 && (
+                <View style={{ marginBottom: scale(16) }}>
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    backgroundColor: tradeStats.currentStreak > 0 ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                    borderRadius: scale(14), 
+                    padding: scale(14), 
+                    gap: scale(10),
+                    borderWidth: 1,
+                    borderColor: tradeStats.currentStreak > 0 ? 'rgba(16, 185, 95, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                  }}>
+                    <Ionicons 
+                      name={tradeStats.currentStreak > 0 ? 'flame' : 'snow'} 
+                      size={scale(22)} 
+                      color={tradeStats.currentStreak > 0 ? '#10B95F' : '#EF4444'} 
+                    />
+                    <Text style={{ 
+                      fontFamily: fonts.semiBold, 
+                      fontSize: fontScale(14), 
+                      color: tradeStats.currentStreak > 0 ? '#10B95F' : '#EF4444',
+                      flex: 1,
+                    }}>
+                      {Math.abs(tradeStats.currentStreak)} Trade {tradeStats.currentStreak > 0 ? 'Win' : 'Loss'} Streak!
+                    </Text>
+                  </View>
+                </View>
+              )}
+              
+              {/* Filter Bar */}
+              <View style={{
+                flexDirection: 'row',
+                marginBottom: scale(16),
+                gap: scale(8),
+              }}>
+                {(['all', 'wins', 'losses'] as FilterType[]).map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    onPress={() => setFilter(f)}
+                    style={{
+                      paddingVertical: scale(10),
+                      paddingHorizontal: scale(18),
+                      borderRadius: scale(12),
+                      backgroundColor: filter === f 
+                        ? (f === 'wins' ? 'rgba(16, 185, 95, 0.15)' : f === 'losses' ? 'rgba(239, 68, 68, 0.15)' : themeColors.card)
+                        : 'transparent',
+                      borderWidth: 1,
+                      borderColor: filter === f ? 'transparent' : themeColors.cardBorder,
+                    }}
+                  >
+                    <Text style={{
+                      fontFamily: fonts.semiBold,
+                      fontSize: fontScale(13),
+                      color: filter === f 
+                        ? (f === 'wins' ? '#10B95F' : f === 'losses' ? '#EF4444' : themeColors.text)
+                        : themeColors.textMuted,
+                      textTransform: 'capitalize',
+                    }}>
+                      {f} ({f === 'wins' ? tradeStats.winningTrades : f === 'losses' ? tradeStats.losingTrades : tradeStats.totalTrades})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Section Label */}
+              <Text style={{ 
+                fontFamily: fonts.semiBold, 
+                fontSize: fontScale(13), 
+                color: themeColors.textMuted, 
+                textTransform: 'uppercase', 
+                letterSpacing: 1, 
+                marginBottom: scale(12) 
+              }}>
+                Recent Trades
+              </Text>
+            </>
+          )}
+        />
       )}
     </SafeAreaView>
   );

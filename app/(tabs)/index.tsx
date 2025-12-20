@@ -445,96 +445,107 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Getting Started Guide - Show when no months AND no trades */}
+        {/* Getting Started - Show when no months AND no trades */}
         {months.length === 0 && trades.length === 0 && (
           <View style={{ paddingHorizontal: scale(20), marginBottom: scale(24) }}>
             <LinearGradient
-              colors={isDark ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(16, 185, 95, 0.1)', 'rgba(16, 185, 95, 0.02)']}
+              colors={isDark ? ['rgba(16, 185, 95, 0.12)', 'rgba(16, 185, 95, 0.03)'] : ['rgba(16, 185, 95, 0.08)', 'rgba(16, 185, 95, 0.02)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ 
                 borderRadius: scale(24),
-                padding: scale(24),
+                padding: scale(28),
                 borderWidth: 1,
-                borderColor: 'rgba(16, 185, 95, 0.2)',
+                borderColor: 'rgba(16, 185, 95, 0.15)',
+                alignItems: 'center',
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(20) }}>
-                <View style={{ 
-                  width: scale(44), 
-                  height: scale(44), 
-                  borderRadius: scale(14), 
-                  backgroundColor: '#10B95F',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: scale(16),
-                  shadowColor: '#10B95F',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}>
-                  <Ionicons name="rocket" size={scale(22)} color="#FFFFFF" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(18), color: themeColors.text, marginBottom: scale(2) }}>
-                    Start Your Journey
-                  </Text>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: '#10B95F' }}>
-                    Track. Analyze. Grow.
-                  </Text>
-                </View>
+              {/* Glowing Icon Container */}
+              <View style={{ 
+                width: scale(72), 
+                height: scale(72), 
+                borderRadius: scale(22), 
+                backgroundColor: '#10B95F',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: scale(20),
+                shadowColor: '#10B95F',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 20,
+                elevation: 10,
+              }}>
+                <Ionicons name="rocket" size={scale(36)} color="#FFFFFF" />
               </View>
               
-              <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(14), color: themeColors.textMuted, lineHeight: fontScale(22), marginBottom: scale(24), textAlign: 'center' }}>
-                Welcome to TradeX! You're just a few steps away from tracking your trading performance like a pro.
+              <Text style={{ 
+                fontFamily: fonts.bold, 
+                fontSize: fontScale(24), 
+                color: themeColors.text, 
+                marginBottom: scale(10),
+                textAlign: 'center',
+              }}>
+                Welcome to TradeX!
               </Text>
               
-              <View style={{ gap: scale(20) }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ 
-                    width: scale(28), height: scale(28), borderRadius: scale(14), 
-                    backgroundColor: isDark ? 'rgba(16, 185, 95, 0.1)' : '#FFFFFF', 
-                    justifyContent: 'center', alignItems: 'center', marginRight: scale(14),
-                    borderWidth: 1, borderColor: 'rgba(16, 185, 95, 0.3)',
-                    shadowColor: '#10B95F', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 6
-                  }}>
-                    <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(13), color: '#10B95F' }}>1</Text>
-                  </View>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: themeColors.text, flex: 1, lineHeight: fontScale(20) }}>
-                    Tap <Text style={{ color: '#10B95F', fontFamily: fonts.bold }}>"Add Month"</Text> below to log your first month
-                  </Text>
-                </View>
+              <Text style={{ 
+                fontFamily: fonts.regular, 
+                fontSize: fontScale(15), 
+                color: themeColors.textMuted, 
+                lineHeight: fontScale(24), 
+                textAlign: 'center',
+                marginBottom: scale(28),
+                paddingHorizontal: scale(10),
+              }}>
+                Track your trading performance with monthly summaries or individual trades.
+              </Text>
+              
+              <View style={{ flexDirection: 'row', gap: scale(12), width: '100%' }}>
+                <TouchableOpacity 
+                  onPress={() => router.push('/add-month')}
+                  style={{ flex: 1 }}
+                >
+                  <LinearGradient
+                    colors={['#10B95F', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      paddingVertical: scale(15),
+                      borderRadius: scale(14),
+                      alignItems: 'center',
+                      shadowColor: '#10B95F',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
+                  >
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: '#FFFFFF' }}>Add Month</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
                 
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ 
-                    width: scale(28), height: scale(28), borderRadius: scale(14), 
-                    backgroundColor: isDark ? 'rgba(16, 185, 95, 0.1)' : '#FFFFFF', 
-                    justifyContent: 'center', alignItems: 'center', marginRight: scale(14),
-                    borderWidth: 1, borderColor: 'rgba(16, 185, 95, 0.3)',
-                    shadowColor: '#10B95F', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 6
-                  }}>
-                    <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(13), color: '#10B95F' }}>2</Text>
-                  </View>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: themeColors.text, flex: 1, lineHeight: fontScale(20) }}>
-                    Enter your P&L, notes, and mark the month status
-                  </Text>
-                </View>
-                
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ 
-                    width: scale(28), height: scale(28), borderRadius: scale(14), 
-                    backgroundColor: isDark ? 'rgba(16, 185, 95, 0.1)' : '#FFFFFF', 
-                    justifyContent: 'center', alignItems: 'center', marginRight: scale(14),
-                    borderWidth: 1, borderColor: 'rgba(16, 185, 95, 0.3)',
-                    shadowColor: '#10B95F', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 6
-                  }}>
-                    <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(13), color: '#10B95F' }}>3</Text>
-                  </View>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: themeColors.text, flex: 1, lineHeight: fontScale(20) }}>
-                    View analytics, trends, and AI insights as you track
-                  </Text>
-                </View>
+                <TouchableOpacity 
+                  onPress={() => router.push('/add-trade')}
+                  style={{ flex: 1 }}
+                >
+                  <LinearGradient
+                    colors={['#FB923C', '#F97316']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      paddingVertical: scale(15),
+                      borderRadius: scale(14),
+                      alignItems: 'center',
+                      shadowColor: '#FB923C',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
+                  >
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: '#FFFFFF' }}>Add Trade</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
               </View>
             </LinearGradient>
           </View>

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -25,16 +26,6 @@ import { createTradeRecord } from '../src/services/tradeCalculationService';
 import { TradeFormInput } from '../src/types';
 import { fontScale, scale } from '../src/utils/scaling';
 
-// Input styles helper
-const getInputStyles = (isDark: boolean) => ({
-  bg: isDark ? '#09090B' : '#FFFFFF',
-  card: isDark ? '#18181B' : '#F4F4F5',
-  cardBorder: isDark ? '#27272A' : '#E4E4E7',
-  text: isDark ? '#FFFFFF' : '#18181B',
-  textMuted: isDark ? '#71717A' : '#A1A1AA',
-  inputBg: isDark ? '#27272A' : '#FFFFFF',
-});
-
 export default function AddTradeScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
@@ -57,7 +48,14 @@ export default function AddTradeScreen() {
   const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
   const [showExitDatePicker, setShowExitDatePicker] = useState(false);
   
-  const themeColors = getInputStyles(isDark);
+  const themeColors = {
+    bg: isDark ? '#09090B' : '#FFFFFF',
+    card: isDark ? '#18181B' : '#F4F4F5',
+    cardBorder: isDark ? '#27272A' : '#E4E4E7',
+    text: isDark ? '#FFFFFF' : '#18181B',
+    textMuted: isDark ? '#71717A' : '#A1A1AA',
+    inputBg: isDark ? '#1F1F23' : '#FFFFFF',
+  };
   
   // Parse date string to Date object
   const parseDate = (dateStr: string) => {
@@ -73,7 +71,7 @@ export default function AddTradeScreen() {
   // Format date for display
   const formatDateDisplay = (dateStr: string) => {
     const date = parseDate(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
   
   // Handle date change
@@ -100,30 +98,34 @@ export default function AddTradeScreen() {
     const entry = parseFloat(form.entryPrice) || 0;
     const exit = parseFloat(form.exitPrice) || 0;
     const qty = parseFloat(form.quantity) || 0;
+    
+    if (entry === 0 || exit === 0 || qty === 0) {
+      return { pnl: 0, returnPct: 0 };
+    }
+    
     const direction = form.tradeType === 'long' ? 1 : -1;
     const pnl = (exit - entry) * qty * direction;
-    const returnPct = entry > 0 ? ((exit - entry) / entry) * 100 * direction : 0;
+    const returnPct = ((exit - entry) / entry) * 100 * direction;
+    
     return { pnl, returnPct };
   };
   
   const preview = calculatePreview();
   
+  // Form validation
+  const isValidForm = () => {
+    return (
+      form.symbol.trim() !== '' &&
+      parseFloat(form.entryPrice) > 0 &&
+      parseFloat(form.exitPrice) > 0 &&
+      parseFloat(form.quantity) > 0
+    );
+  };
+  
+  // Handle submit
   const handleSubmit = async () => {
-    // Validation
-    if (!form.symbol.trim()) {
-      Alert.alert('Error', 'Please enter a symbol');
-      return;
-    }
-    if (!form.entryPrice || parseFloat(form.entryPrice) <= 0) {
-      Alert.alert('Error', 'Please enter a valid entry price');
-      return;
-    }
-    if (!form.exitPrice || parseFloat(form.exitPrice) <= 0) {
-      Alert.alert('Error', 'Please enter a valid exit price');
-      return;
-    }
-    if (!form.quantity || parseFloat(form.quantity) <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+    if (!isValidForm()) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
     
@@ -133,12 +135,11 @@ export default function AddTradeScreen() {
     try {
       const trade = createTradeRecord(uuidv4(), form);
       await addTrade(trade);
-      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
-      console.error('Add trade error:', error);
-      Alert.alert('Error', 'Failed to save trade');
+      console.error('Failed to save trade:', error);
+      Alert.alert('Error', 'Failed to save trade. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -146,76 +147,45 @@ export default function AddTradeScreen() {
   
   // iOS Date Picker Modal
   const renderIOSDatePicker = (
-    show: boolean, 
-    onClose: () => void, 
-    value: string, 
+    visible: boolean,
+    onClose: () => void,
+    dateValue: string,
     onChange: (event: DateTimePickerEvent, date?: Date) => void,
     title: string
   ) => (
-    <Modal visible={show} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide">
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-        <View style={{
-          backgroundColor: isDark ? '#18181B' : '#FFFFFF',
-          borderTopLeftRadius: scale(20),
-          borderTopRightRadius: scale(20),
-          paddingBottom: scale(40),
+        <View style={{ 
+          backgroundColor: themeColors.card, 
+          borderTopLeftRadius: scale(24), 
+          borderTopRightRadius: scale(24),
+          paddingBottom: scale(30),
         }}>
-          <View style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
             alignItems: 'center',
-            padding: scale(16),
+            padding: scale(20),
             borderBottomWidth: 1,
             borderBottomColor: themeColors.cardBorder,
           }}>
+            <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>{title}</Text>
             <TouchableOpacity onPress={onClose}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: '#EF4444' }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>
-              {title}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: '#10B95F' }}>
-                Done
-              </Text>
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: '#FB923C' }}>Done</Text>
             </TouchableOpacity>
           </View>
           <DateTimePicker
-            value={parseDate(value)}
+            value={parseDate(dateValue)}
             mode="date"
             display="spinner"
             onChange={onChange}
-            themeVariant={isDark ? 'dark' : 'light'}
-            style={{ height: 200 }}
+            textColor={themeColors.text}
+            style={{ height: 180 }}
           />
         </View>
       </View>
     </Modal>
   );
-  
-  // Input label style
-  const labelStyle = {
-    fontFamily: fonts.semiBold,
-    fontSize: fontScale(12),
-    color: themeColors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    marginBottom: scale(8),
-  };
-  
-  // Input field style
-  const inputStyle = {
-    backgroundColor: themeColors.inputBg,
-    borderRadius: scale(12),
-    borderWidth: 1,
-    borderColor: themeColors.cardBorder,
-    padding: scale(14),
-    fontFamily: fonts.regular,
-    fontSize: fontScale(16),
-    color: themeColors.text,
-  };
   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.bg }} edges={['top']}>
@@ -230,14 +200,19 @@ export default function AddTradeScreen() {
           alignItems: 'center',
           paddingHorizontal: scale(20),
           paddingVertical: scale(16),
-          borderBottomWidth: 1,
-          borderBottomColor: themeColors.cardBorder,
         }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{ padding: scale(4) }}
+            style={{ 
+              width: scale(40), 
+              height: scale(40), 
+              borderRadius: scale(12),
+              backgroundColor: themeColors.card,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
           >
-            <Ionicons name="close" size={scale(28)} color={themeColors.text} />
+            <Ionicons name="close" size={scale(22)} color={themeColors.text} />
           </TouchableOpacity>
           
           <Text style={{
@@ -250,22 +225,27 @@ export default function AddTradeScreen() {
           
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={isSubmitting}
-            style={{
-              backgroundColor: '#10B95F',
-              paddingHorizontal: scale(16),
-              paddingVertical: scale(8),
-              borderRadius: scale(8),
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
+            disabled={isSubmitting || !isValidForm()}
+            style={{ opacity: isSubmitting || !isValidForm() ? 0.5 : 1 }}
           >
-            <Text style={{
-              fontFamily: fonts.semiBold,
-              fontSize: fontScale(14),
-              color: '#FFFFFF',
-            }}>
-              {isSubmitting ? 'Saving...' : 'Save'}
-            </Text>
+            <LinearGradient
+              colors={['#FB923C', '#F97316']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                paddingHorizontal: scale(20),
+                paddingVertical: scale(10),
+                borderRadius: scale(12),
+              }}
+            >
+              <Text style={{
+                fontFamily: fonts.semiBold,
+                fontSize: fontScale(14),
+                color: '#FFFFFF',
+              }}>
+                {isSubmitting ? 'Saving...' : 'Save'}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
         
@@ -273,22 +253,59 @@ export default function AddTradeScreen() {
           style={{ flex: 1 }} 
           contentContainerStyle={{ padding: scale(20) }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Symbol */}
-          <View style={{ marginBottom: scale(16) }}>
-            <Text style={labelStyle}>Symbol</Text>
-            <TextInput
-              style={inputStyle}
-              value={form.symbol}
-              onChangeText={(text) => setForm({ ...form, symbol: text.toUpperCase() })}
-              placeholder="e.g., AAPL, BTC"
-              placeholderTextColor={themeColors.textMuted}
-            />
+          {/* Symbol Input */}
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Symbol
+            </Text>
+            <View style={{
+              backgroundColor: themeColors.inputBg,
+              borderRadius: scale(14),
+              borderWidth: 1,
+              borderColor: themeColors.cardBorder,
+              paddingHorizontal: scale(16),
+              paddingVertical: scale(14),
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="trending-up" size={scale(20)} color={themeColors.textMuted} style={{ marginRight: scale(12) }} />
+              <TextInput
+                style={{ 
+                  flex: 1,
+                  fontFamily: fonts.semiBold, 
+                  fontSize: fontScale(17), 
+                  color: themeColors.text,
+                  padding: 0,
+                }}
+                value={form.symbol}
+                onChangeText={(text) => setForm({ ...form, symbol: text.toUpperCase() })}
+                placeholder="e.g., AAPL, BTC"
+                placeholderTextColor={themeColors.textMuted}
+              />
+            </View>
           </View>
           
           {/* Trade Type Toggle */}
-          <View style={{ marginBottom: scale(16) }}>
-            <Text style={labelStyle}>Trade Type</Text>
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Trade Type
+            </Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               {(['long', 'short'] as const).map((type) => (
                 <TouchableOpacity
@@ -297,189 +314,351 @@ export default function AddTradeScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setForm({ ...form, tradeType: type });
                   }}
-                  style={{
-                    flex: 1,
-                    paddingVertical: scale(14),
-                    borderRadius: scale(12),
-                    borderWidth: 2,
-                    borderColor: form.tradeType === type 
-                      ? (type === 'long' ? '#10B95F' : '#EF4444')
-                      : themeColors.cardBorder,
-                    backgroundColor: form.tradeType === type
-                      ? (type === 'long' ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)')
-                      : themeColors.inputBg,
-                    alignItems: 'center',
-                  }}
+                  style={{ flex: 1 }}
                 >
-                  <Text style={{
-                    fontFamily: fonts.bold,
-                    fontSize: fontScale(14),
-                    color: form.tradeType === type
-                      ? (type === 'long' ? '#10B95F' : '#EF4444')
-                      : themeColors.textMuted,
-                    textTransform: 'uppercase',
-                  }}>
-                    {type}
-                  </Text>
+                  <LinearGradient
+                    colors={form.tradeType === type 
+                      ? (type === 'long' ? ['#10B95F', '#059669'] : ['#EF4444', '#DC2626'])
+                      : [themeColors.inputBg, themeColors.inputBg]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      paddingVertical: scale(16),
+                      borderRadius: scale(14),
+                      borderWidth: form.tradeType === type ? 0 : 1,
+                      borderColor: themeColors.cardBorder,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Ionicons 
+                      name={type === 'long' ? 'arrow-up' : 'arrow-down'} 
+                      size={scale(18)} 
+                      color={form.tradeType === type ? '#FFFFFF' : themeColors.textMuted} 
+                      style={{ marginBottom: scale(4) }}
+                    />
+                    <Text style={{
+                      fontFamily: fonts.bold,
+                      fontSize: fontScale(14),
+                      color: form.tradeType === type ? '#FFFFFF' : themeColors.textMuted,
+                      textTransform: 'uppercase',
+                    }}>
+                      {type}
+                    </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
           
-          {/* Dates Row */}
-          <View style={{ flexDirection: 'row', gap: scale(12) }}>
-            <View style={{ flex: 1, marginBottom: scale(16) }}>
-              <Text style={labelStyle}>Entry Date</Text>
+          {/* Dates Section */}
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Trade Dates
+            </Text>
+            <View style={{ flexDirection: 'row', gap: scale(12) }}>
               <TouchableOpacity
                 onPress={() => setShowEntryDatePicker(true)}
                 style={{
-                  ...inputStyle,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flex: 1,
+                  backgroundColor: themeColors.inputBg,
+                  borderRadius: scale(14),
+                  borderWidth: 1,
+                  borderColor: themeColors.cardBorder,
+                  padding: scale(16),
                 }}
               >
-                <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.text }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
+                  <Ionicons name="log-in-outline" size={scale(16)} color="#10B95F" />
+                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#10B95F', marginLeft: scale(6), textTransform: 'uppercase' }}>Entry</Text>
+                </View>
+                <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
                   {formatDateDisplay(form.entryDate)}
                 </Text>
-                <Ionicons name="calendar-outline" size={scale(18)} color={themeColors.textMuted} />
               </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1, marginBottom: scale(16) }}>
-              <Text style={labelStyle}>Exit Date</Text>
+              
+              <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
+              </View>
+              
               <TouchableOpacity
                 onPress={() => setShowExitDatePicker(true)}
                 style={{
-                  ...inputStyle,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flex: 1,
+                  backgroundColor: themeColors.inputBg,
+                  borderRadius: scale(14),
+                  borderWidth: 1,
+                  borderColor: themeColors.cardBorder,
+                  padding: scale(16),
                 }}
               >
-                <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(15), color: themeColors.text }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
+                  <Ionicons name="log-out-outline" size={scale(16)} color="#FB923C" />
+                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginLeft: scale(6), textTransform: 'uppercase' }}>Exit</Text>
+                </View>
+                <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
                   {formatDateDisplay(form.exitDate)}
                 </Text>
-                <Ionicons name="calendar-outline" size={scale(18)} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
           
-          {/* Prices Row */}
-          <View style={{ flexDirection: 'row', gap: scale(12) }}>
-            <View style={{ flex: 1, marginBottom: scale(16) }}>
-              <Text style={labelStyle}>Entry Price</Text>
-              <TextInput
-                style={inputStyle}
-                value={form.entryPrice}
-                onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9.]/g, '');
-                  // Only allow one decimal point
-                  const parts = cleaned.split('.');
-                  const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
-                  setForm({ ...form, entryPrice: valid });
-                }}
-                placeholder="0.00"
-                placeholderTextColor={themeColors.textMuted}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={{ flex: 1, marginBottom: scale(16) }}>
-              <Text style={labelStyle}>Exit Price</Text>
-              <TextInput
-                style={inputStyle}
-                value={form.exitPrice}
-                onChangeText={(text) => {
-                  const cleaned = text.replace(/[^0-9.]/g, '');
-                  const parts = cleaned.split('.');
-                  const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
-                  setForm({ ...form, exitPrice: valid });
-                }}
-                placeholder="0.00"
-                placeholderTextColor={themeColors.textMuted}
-                keyboardType="decimal-pad"
-              />
+          {/* Prices Section */}
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Prices
+            </Text>
+            <View style={{ flexDirection: 'row', gap: scale(12) }}>
+              <View style={{ flex: 1 }}>
+                <View style={{
+                  backgroundColor: themeColors.inputBg,
+                  borderRadius: scale(14),
+                  borderWidth: 1,
+                  borderColor: themeColors.cardBorder,
+                  padding: scale(16),
+                }}>
+                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#10B95F', marginBottom: scale(8), textTransform: 'uppercase' }}>Entry Price</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
+                    <TextInput
+                      style={{ 
+                        flex: 1,
+                        fontFamily: fonts.semiBold, 
+                        fontSize: fontScale(18), 
+                        color: themeColors.text,
+                        padding: 0,
+                      }}
+                      value={form.entryPrice}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9.]/g, '');
+                        const parts = cleaned.split('.');
+                        const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                        setForm({ ...form, entryPrice: valid });
+                      }}
+                      placeholder="0.00"
+                      placeholderTextColor={themeColors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <View style={{
+                  backgroundColor: themeColors.inputBg,
+                  borderRadius: scale(14),
+                  borderWidth: 1,
+                  borderColor: themeColors.cardBorder,
+                  padding: scale(16),
+                }}>
+                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginBottom: scale(8), textTransform: 'uppercase' }}>Exit Price</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
+                    <TextInput
+                      style={{ 
+                        flex: 1,
+                        fontFamily: fonts.semiBold, 
+                        fontSize: fontScale(18), 
+                        color: themeColors.text,
+                        padding: 0,
+                      }}
+                      value={form.exitPrice}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9.]/g, '');
+                        const parts = cleaned.split('.');
+                        const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                        setForm({ ...form, exitPrice: valid });
+                      }}
+                      placeholder="0.00"
+                      placeholderTextColor={themeColors.textMuted}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
           
           {/* Quantity */}
-          <View style={{ marginBottom: scale(16) }}>
-            <Text style={labelStyle}>Quantity</Text>
-            <TextInput
-              style={inputStyle}
-              value={form.quantity}
-              onChangeText={(text) => {
-                const cleaned = text.replace(/[^0-9.]/g, '');
-                const parts = cleaned.split('.');
-                const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
-                setForm({ ...form, quantity: valid });
-              }}
-              placeholder="0"
-              placeholderTextColor={themeColors.textMuted}
-              keyboardType="decimal-pad"
-            />
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Quantity
+            </Text>
+            <View style={{
+              backgroundColor: themeColors.inputBg,
+              borderRadius: scale(14),
+              borderWidth: 1,
+              borderColor: themeColors.cardBorder,
+              paddingHorizontal: scale(16),
+              paddingVertical: scale(14),
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="layers-outline" size={scale(20)} color={themeColors.textMuted} style={{ marginRight: scale(12) }} />
+              <TextInput
+                style={{ 
+                  flex: 1,
+                  fontFamily: fonts.semiBold, 
+                  fontSize: fontScale(17), 
+                  color: themeColors.text,
+                  padding: 0,
+                }}
+                value={form.quantity}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9.]/g, '');
+                  const parts = cleaned.split('.');
+                  const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                  setForm({ ...form, quantity: valid });
+                }}
+                placeholder="0"
+                placeholderTextColor={themeColors.textMuted}
+                keyboardType="decimal-pad"
+              />
+            </View>
           </View>
           
           {/* P&L Preview */}
           {form.entryPrice && form.exitPrice && form.quantity && (
-            <View style={{
-              backgroundColor: preview.pnl >= 0 ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-              borderRadius: scale(12),
-              padding: scale(16),
-              marginBottom: scale(16),
-              alignItems: 'center',
-            }}>
-              <Text style={{
-                fontFamily: fonts.regular,
-                fontSize: fontScale(12),
-                color: themeColors.textMuted,
-                marginBottom: scale(4),
-              }}>
-                Estimated P&L
-              </Text>
-              <Text style={{
-                fontFamily: fonts.bold,
-                fontSize: fontScale(28),
-                color: preview.pnl >= 0 ? '#10B95F' : '#EF4444',
-              }}>
-                {preview.pnl >= 0 ? '+' : ''}${preview.pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-              <Text style={{
-                fontFamily: fonts.medium,
-                fontSize: fontScale(14),
-                color: preview.pnl >= 0 ? '#10B95F' : '#EF4444',
-              }}>
-                {preview.returnPct >= 0 ? '+' : ''}{preview.returnPct.toFixed(2)}%
-              </Text>
+            <View style={{ marginBottom: scale(24) }}>
+              <LinearGradient
+                colors={preview.pnl >= 0 ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  borderRadius: scale(16),
+                  padding: scale(20),
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: preview.pnl >= 0 ? 'rgba(16, 185, 95, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                }}
+              >
+                <Text style={{
+                  fontFamily: fonts.medium,
+                  fontSize: fontScale(12),
+                  color: themeColors.textMuted,
+                  marginBottom: scale(6),
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                }}>
+                  Estimated P&L
+                </Text>
+                <Text style={{
+                  fontFamily: fonts.extraBold,
+                  fontSize: fontScale(32),
+                  color: preview.pnl >= 0 ? '#10B95F' : '#EF4444',
+                }}>
+                  {preview.pnl >= 0 ? '+' : ''}${Math.abs(preview.pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                <Text style={{
+                  fontFamily: fonts.semiBold,
+                  fontSize: fontScale(15),
+                  color: preview.pnl >= 0 ? '#10B95F' : '#EF4444',
+                }}>
+                  {preview.returnPct >= 0 ? '+' : ''}{preview.returnPct.toFixed(2)}%
+                </Text>
+              </LinearGradient>
             </View>
           )}
           
           {/* Tags */}
-          <View style={{ marginBottom: scale(16) }}>
-            <Text style={labelStyle}>Tags (comma separated)</Text>
-            <TextInput
-              style={inputStyle}
-              value={form.tags}
-              onChangeText={(text) => setForm({ ...form, tags: text })}
-              placeholder="e.g., swing, earnings, breakout"
-              placeholderTextColor={themeColors.textMuted}
-            />
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Tags (optional)
+            </Text>
+            <View style={{
+              backgroundColor: themeColors.inputBg,
+              borderRadius: scale(14),
+              borderWidth: 1,
+              borderColor: themeColors.cardBorder,
+              paddingHorizontal: scale(16),
+              paddingVertical: scale(14),
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Ionicons name="pricetag-outline" size={scale(20)} color={themeColors.textMuted} style={{ marginRight: scale(12) }} />
+              <TextInput
+                style={{ 
+                  flex: 1,
+                  fontFamily: fonts.regular, 
+                  fontSize: fontScale(15), 
+                  color: themeColors.text,
+                  padding: 0,
+                }}
+                value={form.tags}
+                onChangeText={(text) => setForm({ ...form, tags: text })}
+                placeholder="swing, earnings, breakout..."
+                placeholderTextColor={themeColors.textMuted}
+              />
+            </View>
           </View>
           
           {/* Notes */}
-          <View style={{ marginBottom: scale(16) }}>
-            <Text style={labelStyle}>Notes</Text>
-            <TextInput
-              style={{ ...inputStyle, minHeight: scale(80), textAlignVertical: 'top' }}
-              value={form.notes}
-              onChangeText={(text) => setForm({ ...form, notes: text })}
-              placeholder="Trade notes, observations..."
-              placeholderTextColor={themeColors.textMuted}
-              multiline
-            />
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Notes (optional)
+            </Text>
+            <View style={{
+              backgroundColor: themeColors.inputBg,
+              borderRadius: scale(14),
+              borderWidth: 1,
+              borderColor: themeColors.cardBorder,
+              padding: scale(16),
+              minHeight: scale(100),
+            }}>
+              <TextInput
+                style={{ 
+                  fontFamily: fonts.regular, 
+                  fontSize: fontScale(15), 
+                  color: themeColors.text,
+                  padding: 0,
+                  textAlignVertical: 'top',
+                }}
+                value={form.notes}
+                onChangeText={(text) => setForm({ ...form, notes: text })}
+                placeholder="Trade observations, lessons learned..."
+                placeholderTextColor={themeColors.textMuted}
+                multiline
+              />
+            </View>
           </View>
           
           {/* Extra padding for keyboard */}
-          <View style={{ height: scale(80) }} />
+          <View style={{ height: scale(60) }} />
         </ScrollView>
       </KeyboardAvoidingView>
       
