@@ -412,9 +412,9 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons 
-                  name="settings-outline" 
+                  name="settings" 
                   size={scale(22)} 
-                  color={themeColors.textMuted} 
+                  color={themeColors.text} 
                 />
               </TouchableOpacity>
             </View>

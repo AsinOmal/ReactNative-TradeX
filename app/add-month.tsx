@@ -167,15 +167,51 @@ export default function AddMonthScreen() {
         style={styles.flex1}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+        }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+            style={{ 
+              width: 40, 
+              height: 40, 
+              borderRadius: 12,
+              backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
           >
-            <Ionicons name="close" size={24} color={themeColors.text} />
+            <Ionicons name="close" size={22} color={themeColors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: themeColors.text }]}>New Month</Text>
-          <View style={styles.headerSpacer} />
+          
+          <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: themeColors.text }}>
+            New Month
+          </Text>
+          
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isSubmitting || !calculations}
+            style={{ opacity: isSubmitting || !calculations ? 0.5 : 1 }}
+          >
+            <LinearGradient
+              colors={['#10B95F', '#059669']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+                borderRadius: 12,
+              }}
+            >
+              <Text style={{ fontFamily: fonts.semiBold, fontSize: 14, color: '#FFFFFF' }}>
+                {isSubmitting ? 'Saving...' : 'Save'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
         
         <ScrollView 
@@ -345,28 +381,43 @@ export default function AddMonthScreen() {
           
           {/* Live Summary */}
           {calculations && (
-            <View style={[styles.summaryCard, { backgroundColor: themeColors.summaryBg, borderColor: 'rgba(16, 185, 95, 0.2)' }]}>
-              <View style={styles.summaryHeader}>
-                <Ionicons name="analytics" size={20} color={colors.primary} />
-                <Text style={[styles.summaryTitle, { color: themeColors.text }]}>Summary</Text>
-              </View>
+            <LinearGradient
+              colors={calculations.netProfitLoss >= 0 
+                ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] 
+                : ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: 20,
+                padding: 24,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: calculations.netProfitLoss >= 0 ? 'rgba(16, 185, 95, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+              }}
+            >
+              <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: themeColors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, textAlign: 'center' }}>
+                Estimated P&L
+              </Text>
               
-              <View style={[styles.summaryGrid, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Net P&L</Text>
-                  <Text style={[styles.summaryValue, { color: calculations.netProfitLoss >= 0 ? colors.profit : colors.loss }]}>
-                    {formatCurrency(calculations.netProfitLoss, true)}
-                  </Text>
-                </View>
-                
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: themeColors.textMuted }]}>Return</Text>
-                  <Text style={[styles.summaryValue, { color: calculations.returnPercentage >= 0 ? colors.profit : colors.loss }]}>
-                    {formatPercentage(calculations.returnPercentage, true)}
-                  </Text>
-                </View>
-              </View>
-            </View>
+              <Text style={{ 
+                fontFamily: fonts.extraBold, 
+                fontSize: 36, 
+                color: calculations.netProfitLoss >= 0 ? colors.profit : colors.loss, 
+                textAlign: 'center',
+                marginBottom: 4,
+              }}>
+                {formatCurrency(calculations.netProfitLoss, true)}
+              </Text>
+              
+              <Text style={{ 
+                fontFamily: fonts.semiBold, 
+                fontSize: 16, 
+                color: calculations.returnPercentage >= 0 ? colors.profit : colors.loss, 
+                textAlign: 'center',
+              }}>
+                {formatPercentage(calculations.returnPercentage, true)}
+              </Text>
+            </LinearGradient>
           )}
           
           {/* Notes Card */}
@@ -391,20 +442,6 @@ export default function AddMonthScreen() {
 
           <View style={styles.spacer} />
         </ScrollView>
-        
-        {/* Save Button */}
-        <View style={[styles.footer, { backgroundColor: themeColors.bg, borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-          <TouchableOpacity 
-            style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.saveButtonText}>
-              {isSubmitting ? 'Saving...' : 'Save Month'}
-            </Text>
-            {!isSubmitting && <Ionicons name="checkmark" size={20} color="white" />}
-          </TouchableOpacity>
-        </View>
         
         <MonthPicker
           visible={showMonthPicker}
