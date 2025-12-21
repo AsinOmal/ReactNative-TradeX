@@ -221,8 +221,8 @@ npm test -- --coverage
 ```
 
 Current test coverage includes:
-- ✅ Calculation service (20 tests)
-- ✅ Trade calculation service (24 tests)
+- Calculation service (20 tests)
+- Trade calculation service (24 tests)
 
 ---
 
