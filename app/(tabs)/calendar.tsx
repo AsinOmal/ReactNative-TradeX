@@ -143,7 +143,7 @@ export default function CalendarScreen() {
         </View>
         
         {monthRecords.length === 0 ? (
-          <View style={{ paddingHorizontal: scale(20), paddingTop: scale(10) }}>
+          <View style={{ paddingHorizontal: scale(20), paddingTop: scale(40) }}>
             <LinearGradient
               colors={isDark ? ['rgba(245, 158, 11, 0.15)', 'rgba(217, 119, 6, 0.05)'] : ['rgba(245, 158, 11, 0.08)', 'rgba(217, 119, 6, 0.02)']}
               start={{ x: 0, y: 0 }}
