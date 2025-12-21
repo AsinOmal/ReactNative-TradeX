@@ -256,6 +256,4 @@ This project is private and not licensed for public use.
 
 <div align="center">
 
-**Built with ❤️ using React Native & Expo**
-
 </div>
