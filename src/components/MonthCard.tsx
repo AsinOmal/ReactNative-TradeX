@@ -8,6 +8,7 @@ import { MonthRecord } from '../types';
 import { formatMonthDisplay } from '../utils/dateUtils';
 import { formatCurrency, formatPercentage } from '../utils/formatters';
 import { fontScale, scale } from '../utils/scaling';
+import { PrivacyAwareText } from './PrivacyAwareText';
 
 interface MonthCardProps {
   month: MonthRecord;
@@ -55,7 +56,7 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
           right: scale(16),
           zIndex: 10,
           fontSize: fontScale(13),
-          fontFamily: fonts.bold,
+          fontFamily: fonts.extraBold,
           color: month.status === 'active' ? '#3B82F6' : colors.textMuted,
         }
       ]}>
@@ -65,7 +66,7 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: scale(8), paddingRight: scale(70) }}>
-          <Text style={[styles.monthTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+          <Text style={[styles.monthTitle, { color: colors.text, fontFamily: fonts.extraBold }]}>
             {formatMonthDisplay(month.month)}
           </Text>
           
@@ -92,15 +93,19 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
           <View style={styles.metricsRow}>
             <View style={styles.metricItem}>
               <Text style={[styles.metricLabel, { color: colors.textMuted, fontFamily: fonts.medium }]}>Starting</Text>
-              <Text style={[styles.metricValue, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {formatCurrency(month.startingCapital)}
-              </Text>
+              <PrivacyAwareText 
+                value={month.startingCapital}
+                format={formatCurrency}
+                style={[styles.metricValue, { color: colors.text, fontFamily: fonts.semiBold }]}
+              />
             </View>
             <View style={[styles.metricItem, { alignItems: 'flex-end' }]}>
               <Text style={[styles.metricLabel, { color: colors.textMuted, fontFamily: fonts.medium }]}>Ending</Text>
-              <Text style={[styles.metricValue, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {formatCurrency(month.endingCapital)}
-              </Text>
+              <PrivacyAwareText 
+                value={month.endingCapital}
+                format={formatCurrency}
+                style={[styles.metricValue, { color: colors.text, fontFamily: fonts.semiBold }]}
+              />
             </View>
           </View>
           
@@ -109,9 +114,11 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
             <View style={styles.pnlRow}>
               <View>
                 <Text style={[styles.pnlLabel, { color: colors.textMuted, fontFamily: fonts.medium }]}>Net P&L</Text>
-                <Text style={[styles.pnlValueLarge, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.extraBold }]}>
-                  {formatCurrency(month.netProfitLoss, true)}
-                </Text>
+                <PrivacyAwareText 
+                  value={month.netProfitLoss}
+                  format={(val) => formatCurrency(val, true)}
+                  style={[styles.pnlValueLarge, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.extraBold }]}
+                />
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[styles.pnlLabel, { color: colors.textMuted, fontFamily: fonts.medium }]}>Return</Text>
@@ -124,9 +131,12 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
                     size={scale(16)} 
                     color={isProfit ? colors.profit : colors.loss} 
                   />
-                  <Text style={[styles.returnText, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.bold }]}>
-                    {formatPercentage(month.returnPercentage, true)}
-                  </Text>
+                  <PrivacyAwareText 
+                    value={month.returnPercentage}
+                    format={(val) => formatPercentage(val, true)}
+                    style={[styles.returnText, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.bold }]}
+                    maskedValue="•••"
+                  />
                 </View>
               </View>
             </View>
@@ -135,9 +145,11 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
       ) : (
         // Summary View (Recent Performance cards)
         <View style={styles.summary}>
-          <Text style={[styles.pnl, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.extraBold }]}>
-            {formatCurrency(month.netProfitLoss, true)}
-          </Text>
+          <PrivacyAwareText 
+            value={month.netProfitLoss}
+            format={(val) => formatCurrency(val, true)}
+            style={[styles.pnl, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.extraBold }]}
+          />
           <View style={[
             styles.returnPillSmall,
             { backgroundColor: isProfit ? 'rgba(16, 185, 95, 0.15)' : 'rgba(239, 68, 68, 0.15)' }
@@ -147,9 +159,12 @@ export function MonthCard({ month, onPress, showFullDetails = false, tradeCount 
               size={scale(14)} 
               color={isProfit ? colors.profit : colors.loss} 
             />
-            <Text style={[styles.returnPct, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.semiBold }]}>
-              {formatPercentage(month.returnPercentage, true)}
-            </Text>
+            <PrivacyAwareText 
+              value={month.returnPercentage}
+              format={(val) => formatPercentage(val, true)}
+              style={[styles.returnPct, { color: isProfit ? colors.profit : colors.loss, fontFamily: fonts.semiBold }]}
+              maskedValue="•••"
+            />
           </View>
         </View>
       )}

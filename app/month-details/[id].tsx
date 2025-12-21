@@ -211,21 +211,16 @@ export default function MonthDetailsScreen() {
           <TouchableOpacity 
             onPress={() => setIsEditing(!isEditing)} 
             style={{ 
-              paddingHorizontal: 14, 
-              paddingVertical: 8, 
-              borderRadius: 12, 
-              backgroundColor: isEditing 
-                ? (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)')
-                : (isDark ? 'rgba(16,185,95,0.15)' : 'rgba(16,185,95,0.1)')
+              padding: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
           >
-            <Text style={{ 
-              fontFamily: fonts.semiBold, 
-              fontSize: 14, 
-              color: isEditing ? colors.loss : colors.profit 
-            }}>
-              {isEditing ? 'Cancel' : 'Edit'}
-            </Text>
+            <Ionicons 
+              name={isEditing ? "close-circle" : "pencil"} 
+              size={24} 
+              color={isEditing ? colors.loss : colors.primary} 
+            />
           </TouchableOpacity>
         </View>
         

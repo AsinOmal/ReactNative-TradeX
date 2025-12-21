@@ -177,6 +177,7 @@ function AuthenticatedLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="auth" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="auth/verify-email" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="welcome-onboarding" options={{ animation: 'fade' }} />

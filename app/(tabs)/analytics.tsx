@@ -348,7 +348,7 @@ export default function AnalyticsScreen() {
                                         maskedValue="••••••"
                                     />
                                     <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: themeColors.textMuted, marginBottom: scale(4) }}>
-                                        / {formatCurrency(yearlyGoal || 0)}
+                                        / <PrivacyAwareText value={yearlyGoal || 0} format={formatCurrency} style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: themeColors.textMuted }} maskedValue="••••" />
                                     </Text>
                                 </View>
                                 
@@ -368,9 +368,12 @@ export default function AnalyticsScreen() {
                                 {stats.totalProfitLoss < (yearlyGoal || 0) && (
                                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: scale(4) }}>
                                         <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(13), color: themeColors.textMuted }}>To go:</Text>
-                                        <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(13), color: themeColors.text }}>
-                                            {formatCurrency((yearlyGoal || 0) - stats.totalProfitLoss)}
-                                        </Text>
+                                        <PrivacyAwareText 
+                                            value={(yearlyGoal || 0) - stats.totalProfitLoss} 
+                                            format={formatCurrency} 
+                                            style={{ fontFamily: fonts.bold, fontSize: fontScale(13), color: themeColors.text }} 
+                                            maskedValue="••••"
+                                        />
                                     </View>
                                 )}
                             </>

@@ -14,21 +14,21 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fonts } from '../../src/config/fonts';
-import { useAuth } from '../../src/context/AuthContext';
-import { usePrivacy } from '../../src/context/PrivacyContext';
-import { useTheme } from '../../src/context/ThemeContext';
-import { useTrading } from '../../src/context/TradingContext';
+import { fonts } from '../src/config/fonts';
+import { useAuth } from '../src/context/AuthContext';
+import { usePrivacy } from '../src/context/PrivacyContext';
+import { useTheme } from '../src/context/ThemeContext';
+import { useTrading } from '../src/context/TradingContext';
 import {
     BiometricCapabilities,
     getBiometricCapabilities,
     getBiometricName,
     isBiometricEnabled,
     setBiometricEnabled,
-} from '../../src/services/biometricService';
-import { generateAndShareCSV } from '../../src/services/csvService';
-import { exportTradesToCSV } from '../../src/services/exportService';
-import { sendSupportEmail } from '../../src/services/feedbackService';
+} from '../src/services/biometricService';
+import { generateAndShareCSV } from '../src/services/csvService';
+import { exportTradesToCSV } from '../src/services/exportService';
+import { sendSupportEmail } from '../src/services/feedbackService';
 import {
     areNotificationsEnabled,
     cancelAllNotifications,
@@ -37,8 +37,8 @@ import {
     requestNotificationPermissions,
     saveReminderSettings,
     sendTestNotification,
-} from '../../src/services/notificationService';
-import { fontScale, scale } from '../../src/utils/scaling';
+} from '../src/services/notificationService';
+import { fontScale, scale } from '../src/utils/scaling';
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme } = useTheme();
@@ -283,8 +283,27 @@ export default function SettingsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.bg }}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={{ paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) }}>
-          <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(32), color: themeColors.text }}>Settings</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              width: scale(40),
+              height: scale(40),
+              borderRadius: scale(12),
+              backgroundColor: themeColors.card,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: themeColors.border,
+              position: 'absolute',
+              left: scale(20),
+              zIndex: 1,
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={scale(22)} color={themeColors.text} />
+          </TouchableOpacity>
+          <Text style={{ flex: 1, fontFamily: fonts.bold, fontSize: fontScale(24), color: themeColors.text, textAlign: 'center' }}>Settings</Text>
         </View>
         
         {/* Profile Card */}
@@ -309,7 +328,7 @@ export default function SettingsScreen() {
                     if (localName.trim() !== (user?.displayName || '')) {
                       setIsSavingName(true);
                       try {
-                        const { updateDisplayName } = await import('../../src/services/authService');
+                        const { updateDisplayName } = await import('../src/services/authService');
                         await updateDisplayName(localName.trim());
                         await refreshUser();
                       } catch (e) {
@@ -324,7 +343,7 @@ export default function SettingsScreen() {
                     if (localName.trim() !== (user?.displayName || '')) {
                       setIsSavingName(true);
                       try {
-                        const { updateDisplayName } = await import('../../src/services/authService');
+                        const { updateDisplayName } = await import('../src/services/authService');
                         await updateDisplayName(localName.trim());
                         await refreshUser();
                       } catch (e) {

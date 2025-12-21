@@ -116,32 +116,26 @@ export default function TradeDetailScreen() {
           Trade Details
         </Text>
         
-        <View style={{ flexDirection: 'row', gap: scale(8) }}>
+        <View style={{ flexDirection: 'row', gap: scale(4) }}>
           <TouchableOpacity 
             onPress={handleEdit}
             style={{ 
-              width: scale(40), 
-              height: scale(40), 
-              borderRadius: scale(12),
-              backgroundColor: 'rgba(251, 146, 60, 0.15)',
+              padding: scale(8),
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons name="pencil" size={scale(18)} color="#FB923C" />
+            <Ionicons name="pencil" size={scale(22)} color="#FB923C" />
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={handleDelete}
             style={{ 
-              width: scale(40), 
-              height: scale(40), 
-              borderRadius: scale(12),
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              padding: scale(8),
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons name="trash" size={scale(18)} color="#EF4444" />
+            <Ionicons name="trash" size={scale(22)} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
@@ -214,14 +208,18 @@ export default function TradeDetailScreen() {
           {/* Result Badge */}
           <View style={{
             marginTop: scale(16),
-            paddingHorizontal: scale(16),
+            paddingHorizontal: isWin ? scale(12) : scale(16),
             paddingVertical: scale(8),
             borderRadius: scale(20),
             backgroundColor: accentColor,
           }}>
-            <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(12), color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 }}>
-              {isWin ? '🎉 Winner' : isLoss ? 'Loss' : 'Break Even'}
-            </Text>
+            {isWin ? (
+              <Ionicons name="trophy" size={scale(18)} color="#FFFFFF" />
+            ) : (
+              <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(12), color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 }}>
+                {isLoss ? 'Loss' : 'Break Even'}
+              </Text>
+            )}
           </View>
         </LinearGradient>
         

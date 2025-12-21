@@ -360,7 +360,7 @@ export default function HomeScreen() {
         }
       >
         {/* Header - Premium Personalized Design */}
-        <View style={{ paddingHorizontal: scale(20), paddingTop: scale(12), paddingBottom: scale(24) }}>
+        <View style={{ paddingHorizontal: scale(20), paddingTop: scale(12), paddingBottom: scale(12) }}>
           {/* Top Row - Date and Theme Toggle */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
@@ -397,7 +397,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(tabs)/settings');
+                  router.push('/settings');
                 }}
                 style={{
                   width: scale(40),
@@ -583,11 +583,21 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', gap: scale(24) }}>
               <View>
                 <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Win Rate</Text>
-                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>{stats.winRate.toFixed(0)}%</Text>
+                <PrivacyAwareText 
+                  value={stats.winRate}
+                  format={(val) => `${val.toFixed(0)}%`}
+                  style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}
+                  maskedValue="•••"
+                />
               </View>
               <View>
                 <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Avg Return</Text>
-                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>{formatPercentage(stats.averageReturn, true)}</Text>
+                <PrivacyAwareText 
+                  value={stats.averageReturn}
+                  format={(val) => formatPercentage(val, true)}
+                  style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}
+                  maskedValue="•••"
+                />
               </View>
               <View>
                 <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Months</Text>
@@ -601,7 +611,7 @@ export default function HomeScreen() {
         {yearlyGoal > 0 && (
           <View style={{ paddingHorizontal: scale(20), marginBottom: scale(20) }}>
             <TouchableOpacity 
-              onPress={() => router.push('/(tabs)/settings')}
+              onPress={() => router.push('/settings')}
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -633,13 +643,16 @@ export default function HomeScreen() {
                     { paddingHorizontal: scale(12), paddingVertical: scale(6), borderRadius: scale(12) },
                     { backgroundColor: stats.totalProfitLoss >= yearlyGoal ? 'rgba(16, 185, 95, 0.2)' : stats.totalProfitLoss >= yearlyGoal * 0.5 ? 'rgba(251, 146, 60, 0.2)' : 'rgba(99, 102, 241, 0.2)' }
                   ]}>
-                    <Text style={{ 
-                      fontFamily: fonts.bold, 
-                      fontSize: fontScale(14), 
-                      color: stats.totalProfitLoss >= yearlyGoal ? '#10B95F' : stats.totalProfitLoss >= yearlyGoal * 0.5 ? '#FB923C' : '#6366F1' 
-                    }}>
-                      {Math.min(100, Math.max(0, (stats.totalProfitLoss / yearlyGoal) * 100)).toFixed(0)}%
-                    </Text>
+                    <PrivacyAwareText 
+                      value={Math.min(100, Math.max(0, (stats.totalProfitLoss / yearlyGoal) * 100))}
+                      format={(val) => `${val.toFixed(0)}%`}
+                      style={{ 
+                        fontFamily: fonts.bold, 
+                        fontSize: fontScale(14), 
+                        color: stats.totalProfitLoss >= yearlyGoal ? '#10B95F' : stats.totalProfitLoss >= yearlyGoal * 0.5 ? '#FB923C' : '#6366F1' 
+                      }}
+                      maskedValue="•••"
+                    />
                   </View>
                 </View>
                 
@@ -672,9 +685,12 @@ export default function HomeScreen() {
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: themeColors.textMuted, marginBottom: scale(2) }}>Target</Text>
-                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.text }}>
-                      ${yearlyGoal.toLocaleString()}
-                    </Text>
+                    <PrivacyAwareText 
+                      value={yearlyGoal}
+                      format={(val) => `$${val.toLocaleString()}`}
+                      style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.text }}
+                      maskedValue="••••"
+                    />
                   </View>
                 </View>
               </LinearGradient>

@@ -19,6 +19,11 @@ export default function WelcomeBack() {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
+  
+  // Dot animations (sequential)
+  const dot1Anim = useRef(new Animated.Value(0.3)).current;
+  const dot2Anim = useRef(new Animated.Value(0.3)).current;
+  const dot3Anim = useRef(new Animated.Value(0.3)).current;
 
   // Get display name
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Trader';
@@ -67,6 +72,21 @@ export default function WelcomeBack() {
           duration: 1200,
           useNativeDriver: true,
         }),
+      ])
+    ).start();
+
+    // Sequential dot animation
+    const animateDot = (anim: Animated.Value) => 
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+      ]);
+
+    Animated.loop(
+      Animated.stagger(200, [
+        animateDot(dot1Anim),
+        animateDot(dot2Anim),
+        animateDot(dot3Anim),
       ])
     ).start();
   }, []);
@@ -147,9 +167,9 @@ export default function WelcomeBack() {
       {/* Bottom Section - Pulsing Dots */}
       <Animated.View style={[styles.bottomSection, { opacity: fadeAnim }]}>
         <View style={styles.dotsContainer}>
-          <Animated.View style={[styles.dot, { opacity: glowAnim }]} />
-          <Animated.View style={[styles.dot, { opacity: fadeAnim }]} />
-          <Animated.View style={[styles.dot, { opacity: glowAnim }]} />
+          <Animated.View style={[styles.dot, { opacity: dot1Anim }]} />
+          <Animated.View style={[styles.dot, { opacity: dot2Anim }]} />
+          <Animated.View style={[styles.dot, { opacity: dot3Anim }]} />
         </View>
       </Animated.View>
     </View>

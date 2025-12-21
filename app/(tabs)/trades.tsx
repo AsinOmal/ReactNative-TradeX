@@ -14,8 +14,10 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PrivacyAwareText } from '../../src/components/PrivacyAwareText';
 import { SwipeableRow } from '../../src/components/SwipeableRow';
 import { fonts } from '../../src/config/fonts';
+import { usePrivacy } from '../../src/context/PrivacyContext';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useTrading } from '../../src/context/TradingContext';
 import { Trade } from '../../src/types';
@@ -26,6 +28,7 @@ type FilterType = 'all' | 'wins' | 'losses';
 export default function TradesScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
+  const { isPrivacyMode } = usePrivacy();
   const { trades, tradeStats, isLoadingTrades, loadMonths, deleteTrade } = useTrading();
   const [filter, setFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -184,26 +187,32 @@ export default function TradesScreen() {
               color: themeColors.textMuted,
               marginTop: scale(2),
             }}>
-              ${item.entryPrice.toFixed(2)} → ${item.exitPrice.toFixed(2)} × {item.quantity}
+              {isPrivacyMode ? '•••••••• • ••••••••' : `$${item.entryPrice.toFixed(2)} → $${item.exitPrice.toFixed(2)} × ${item.quantity}`}
             </Text>
           </View>
           
           {/* Right: P&L */}
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{
-              fontFamily: fonts.bold,
-              fontSize: fontScale(18),
-              color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.text,
-            }}>
-              {formatCurrency(item.pnl)}
-            </Text>
-            <Text style={{
-              fontFamily: fonts.medium,
-              fontSize: fontScale(12),
-              color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.textMuted,
-            }}>
-              {item.returnPercentage >= 0 ? '+' : ''}{item.returnPercentage.toFixed(1)}%
-            </Text>
+            <PrivacyAwareText 
+              value={item.pnl}
+              format={formatCurrency}
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: fontScale(18),
+                color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.text,
+              }}
+              maskedValue="••••"
+            />
+            <PrivacyAwareText 
+              value={item.returnPercentage}
+              format={(val) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`}
+              style={{
+                fontFamily: fonts.medium,
+                fontSize: fontScale(12),
+                color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.textMuted,
+              }}
+              maskedValue="•••"
+            />
           </View>
         </View>
         
@@ -396,14 +405,22 @@ export default function TradesScreen() {
                   )}
                   
                   <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(14), color: 'rgba(255,255,255,0.8)', marginBottom: scale(4) }}>Total Trade P&L</Text>
-                  <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(38), color: '#FFFFFF', marginBottom: scale(16) }}>
-                    {formatCurrency(tradeStats.totalPnL)}
-                  </Text>
+                  <PrivacyAwareText 
+                    value={tradeStats.totalPnL}
+                    format={formatCurrency}
+                    style={{ fontFamily: fonts.extraBold, fontSize: fontScale(38), color: '#FFFFFF', marginBottom: scale(16) }}
+                    maskedValue="••••••••"
+                  />
                   
                   <View style={{ flexDirection: 'row', gap: scale(24) }}>
                     <View>
                       <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Win Rate</Text>
-                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>{tradeStats.winRate.toFixed(0)}%</Text>
+                      <PrivacyAwareText 
+                        value={tradeStats.winRate}
+                        format={(val) => `${val.toFixed(0)}%`}
+                        style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}
+                        maskedValue="•••"
+                      />
                     </View>
                     <View>
                       <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Trades</Text>
@@ -411,9 +428,12 @@ export default function TradesScreen() {
                     </View>
                     <View>
                       <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(12), color: 'rgba(255,255,255,0.7)' }}>Profit Factor</Text>
-                      <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}>
-                        {tradeStats.profitFactor === Infinity ? '∞' : tradeStats.profitFactor.toFixed(1)}x
-                      </Text>
+                      <PrivacyAwareText 
+                        value={tradeStats.profitFactor}
+                        format={(val) => `${val === Infinity ? '∞' : val.toFixed(1)}x`}
+                        style={{ fontFamily: fonts.bold, fontSize: fontScale(20), color: '#FFFFFF' }}
+                        maskedValue="•••"
+                      />
                     </View>
                   </View>
                 </LinearGradient>

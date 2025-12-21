@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from 'nativewind';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, useColorScheme as useRNColorScheme, View } from 'react-native';
 
 type Theme = 'light' | 'dark';
 
@@ -17,7 +16,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = '@app_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { colorScheme, setColorScheme } = useColorScheme();
+  const systemColorScheme = useRNColorScheme();
   const [isLoaded, setIsLoaded] = useState(false);
   const [theme, setThemeState] = useState<Theme>('dark');
   
@@ -26,29 +25,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     loadTheme();
   }, []);
   
-  // Sync state whenever colorScheme changes externally/internally
-  useEffect(() => {
-     if (colorScheme === 'dark' || colorScheme === 'light') {
-         if (theme !== colorScheme) {
-             setThemeState(colorScheme);
-         }
-     }
-  }, [colorScheme]);
-  
   const loadTheme = async () => {
     try {
       const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
       if (savedTheme === 'light' || savedTheme === 'dark') {
         setThemeState(savedTheme);
-        setColorScheme(savedTheme);
       } else {
-        // Default to dark
+        // Default to dark or system preference if available
         setThemeState('dark');
-        setColorScheme('dark');
       }
     } catch (error) {
       console.error('Error loading theme:', error);
-      setColorScheme('dark');
       setThemeState('dark');
     } finally {
       setIsLoaded(true);
@@ -58,7 +45,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (newTheme: Theme) => {
     // Update state immediately for instant UI response
     setThemeState(newTheme);
-    setColorScheme(newTheme);
     
     // Save to storage asynchronously (fire and forget)
     AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme).catch((error) => {
