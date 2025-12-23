@@ -56,7 +56,9 @@ export async function signInWithGoogle(): Promise<User> {
     try {
       // Configure Google Sign-In
       GoogleSignin.configure({
+        webClientId: '910150341676-l9j7cbvsqcko5ouqocqmkt4un88el48h.apps.googleusercontent.com',
         iosClientId: '910150341676-c4ncqe2n8hv5o4nc6budoeaufdehu61t.apps.googleusercontent.com',
+        offlineAccess: true,
       });
       
       // Check Play Services (Android only)
