@@ -81,12 +81,13 @@ export default function TradeDetailScreen() {
   };
 
   const handleEdit = () => {
-    router.push({ pathname: '/edit-trade', params: { id: trade.id } });
+    router.push(`/edit-trade?id=${trade.id}`);
   };
   
-  const isWin = trade.pnl > 0;
-  const isLoss = trade.pnl < 0;
-  const accentColor = isWin ? '#10B95F' : isLoss ? '#EF4444' : '#71717A';
+  const isOpen = trade.status === 'open';
+  const isWin = (trade.pnl || 0) > 0;
+  const isLoss = (trade.pnl || 0) < 0;
+  const accentColor = isOpen ? '#FB923C' : (isWin ? '#10B95F' : isLoss ? '#EF4444' : '#71717A');
   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.bg }} edges={['top']}>
@@ -166,7 +167,7 @@ export default function TradeDetailScreen() {
           <View style={{ position: 'absolute', bottom: -40, left: -20, width: scale(100), height: scale(100), borderRadius: scale(50), backgroundColor: isWin ? 'rgba(16, 185, 95, 0.08)' : isLoss ? 'rgba(239, 68, 68, 0.08)' : 'rgba(113, 113, 122, 0.08)' }} />
           
           {/* Symbol & Type */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12), marginBottom: scale(16) }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12), marginBottom: scale(16), flexWrap: 'wrap' }}>
             <Text style={{ fontFamily: fonts.extraBold, fontSize: fontScale(28), color: themeColors.text }}>
               {trade.symbol}
             </Text>
@@ -186,41 +187,86 @@ export default function TradeDetailScreen() {
                 {trade.tradeType}
               </Text>
             </View>
-          </View>
-          
-          {/* P&L Display */}
-          <Text style={{
-            fontFamily: fonts.extraBold,
-            fontSize: fontScale(44),
-            color: accentColor,
-            marginBottom: scale(4),
-          }}>
-            {formatCurrency(trade.pnl)}
-          </Text>
-          <Text style={{
-            fontFamily: fonts.semiBold,
-            fontSize: fontScale(18),
-            color: accentColor,
-          }}>
-            {trade.returnPercentage >= 0 ? '+' : ''}{trade.returnPercentage.toFixed(2)}%
-          </Text>
-          
-          {/* Result Badge */}
-          <View style={{
-            marginTop: scale(16),
-            paddingHorizontal: isWin ? scale(12) : scale(16),
-            paddingVertical: scale(8),
-            borderRadius: scale(20),
-            backgroundColor: accentColor,
-          }}>
-            {isWin ? (
-              <Ionicons name="trophy" size={scale(18)} color="#FFFFFF" />
-            ) : (
-              <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(12), color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 }}>
-                {isLoss ? 'Loss' : 'Break Even'}
-              </Text>
+            {isOpen && (
+              <View style={{
+                paddingHorizontal: scale(12),
+                paddingVertical: scale(6),
+                borderRadius: scale(8),
+                backgroundColor: 'rgba(251, 146, 60, 0.2)',
+              }}>
+                <Text style={{
+                  fontFamily: fonts.bold,
+                  fontSize: fontScale(11),
+                  color: '#FB923C',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                }}>
+                  OPEN
+                </Text>
+              </View>
             )}
           </View>
+          
+          {/* P&L Display or OPEN indicator */}
+          {isOpen ? (
+            <>
+              <View style={{
+                width: scale(72),
+                height: scale(72),
+                borderRadius: scale(36),
+                backgroundColor: 'rgba(251, 146, 60, 0.2)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: scale(12),
+              }}>
+                <Ionicons name="time-outline" size={scale(36)} color="#FB923C" />
+              </View>
+              <Text style={{
+                fontFamily: fonts.semiBold,
+                fontSize: fontScale(18),
+                color: themeColors.textMuted,
+              }}>
+                Position Active
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={{
+                fontFamily: fonts.extraBold,
+                fontSize: fontScale(44),
+                color: accentColor,
+                marginBottom: scale(4),
+              }}>
+                {formatCurrency(trade.pnl || 0)}
+              </Text>
+              <Text style={{
+                fontFamily: fonts.semiBold,
+                fontSize: fontScale(18),
+                color: accentColor,
+              }}>
+                {(trade.returnPercentage || 0) >= 0 ? '+' : ''}{(trade.returnPercentage || 0).toFixed(2)}%
+              </Text>
+            </>
+          )}
+          
+          {/* Result Badge */}
+          {!isOpen && (
+            <View style={{
+              marginTop: scale(16),
+              paddingHorizontal: isWin ? scale(12) : scale(16),
+              paddingVertical: scale(8),
+              borderRadius: scale(20),
+              backgroundColor: accentColor,
+            }}>
+              {isWin ? (
+                <Ionicons name="trophy" size={scale(18)} color="#FFFFFF" />
+              ) : (
+                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(12), color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  {isLoss ? 'Loss' : 'Break Even'}
+                </Text>
+              )}
+            </View>
+          )}
         </LinearGradient>
         
         {/* Trade Details Section */}
@@ -236,20 +282,24 @@ export default function TradeDetailScreen() {
             borderColor: themeColors.cardBorder,
           }}>
             {/* Entry Row */}
-            <View style={{ flexDirection: 'row', padding: scale(16), borderBottomWidth: 1, borderBottomColor: themeColors.cardBorder }}>
+            <View style={{ flexDirection: 'row', padding: scale(16), borderBottomWidth: isOpen ? 0 : 1, borderBottomColor: themeColors.cardBorder }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: '#10B95F', marginBottom: scale(4) }}>ENTRY</Text>
                 <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(17), color: themeColors.text }}>${trade.entryPrice.toFixed(2)}</Text>
                 <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(13), color: themeColors.textMuted, marginTop: scale(2) }}>{formatDate(trade.entryDate)}</Text>
               </View>
-              <View style={{ justifyContent: 'center', paddingHorizontal: scale(12) }}>
-                <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
-              </View>
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: '#FB923C', marginBottom: scale(4) }}>EXIT</Text>
-                <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(17), color: themeColors.text }}>${trade.exitPrice.toFixed(2)}</Text>
-                <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(13), color: themeColors.textMuted, marginTop: scale(2) }}>{formatDate(trade.exitDate)}</Text>
-              </View>
+              {!isOpen && (
+                <>
+                  <View style={{ justifyContent: 'center', paddingHorizontal: scale(12) }}>
+                    <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(12), color: '#FB923C', marginBottom: scale(4) }}>EXIT</Text>
+                    <Text style={{ fontFamily: fonts.bold, fontSize: fontScale(17), color: themeColors.text }}>${(trade.exitPrice || 0).toFixed(2)}</Text>
+                    <Text style={{ fontFamily: fonts.regular, fontSize: fontScale(13), color: themeColors.textMuted, marginTop: scale(2) }}>{formatDate(trade.exitDate || trade.entryDate)}</Text>
+                  </View>
+                </>
+              )}
             </View>
             
             {/* Quantity & Month Row */}

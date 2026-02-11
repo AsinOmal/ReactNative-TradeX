@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import 'react-native-get-random-values';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fonts } from '../src/config/fonts';
 import { useTheme } from '../src/context/ThemeContext';
@@ -30,12 +31,12 @@ export default function EditTradeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getTradeById, updateTrade } = useTrading();
   
-  const trade = getTradeById(id || '');
-  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [form, setForm] = useState<TradeFormInput>({
     symbol: '',
     tradeType: 'long',
+    status: 'closed',
     entryDate: new Date().toISOString().split('T')[0],
     exitDate: new Date().toISOString().split('T')[0],
     entryPrice: '',
@@ -45,26 +46,41 @@ export default function EditTradeScreen() {
     tags: '',
   });
   
-  // Initialize form with trade data
+  // Load existing trade data
   useEffect(() => {
-    if (trade) {
-      setForm({
-        symbol: trade.symbol,
-        tradeType: trade.tradeType,
-        entryDate: trade.entryDate,
-        exitDate: trade.exitDate,
-        entryPrice: trade.entryPrice.toString(),
-        exitPrice: trade.exitPrice.toString(),
-        quantity: trade.quantity.toString(),
-        notes: trade.notes || '',
-        tags: trade.tags.join(', '),
-      });
+    if (!id) {
+      router.back();
+      return;
     }
-  }, [trade]);
+    
+    const trade = getTradeById(id);
+    if (!trade) {
+      Alert.alert('Error', 'Trade not found');
+      router.back();
+      return;
+    }
+    
+    // Pre-fill form with existing trade data
+    setForm({
+      symbol: trade.symbol,
+      tradeType: trade.tradeType,
+      status: trade.status,
+      entryDate: trade.entryDate,
+      exitDate: trade.exitDate || new Date().toISOString().split('T')[0],
+      entryPrice: trade.entryPrice.toString(),
+      exitPrice: trade.exitPrice?.toString() || '',
+      quantity: trade.quantity.toString(),
+      notes: trade.notes || '',
+      tags: trade.tags.join(', '),
+    });
+    setIsLoading(false);
+  }, [id, getTradeById]);
   
   // Date picker state
   const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
   const [showExitDatePicker, setShowExitDatePicker] = useState(false);
+  const [tempEntryDate, setTempEntryDate] = useState<Date | null>(null);
+  const [tempExitDate, setTempExitDate] = useState<Date | null>(null);
   
   const themeColors = {
     bg: isDark ? '#09090B' : '#FFFFFF',
@@ -74,21 +90,6 @@ export default function EditTradeScreen() {
     textMuted: isDark ? '#71717A' : '#A1A1AA',
     inputBg: isDark ? '#1F1F23' : '#FFFFFF',
   };
-  
-  if (!trade) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.bg, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(16), color: themeColors.textMuted }}>
-          Trade not found
-        </Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: scale(16) }}>
-          <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(14), color: '#FB923C' }}>
-            Go Back
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
   
   // Parse date string to Date object
   const parseDate = (dateStr: string) => {
@@ -111,25 +112,35 @@ export default function EditTradeScreen() {
   const handleEntryDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowEntryDatePicker(false);
-    }
-    if (selectedDate) {
-      setForm({ ...form, entryDate: formatDateStr(selectedDate) });
+      if (selectedDate) {
+        setForm({ ...form, entryDate: formatDateStr(selectedDate) });
+      }
+    } else {
+      // iOS: just update temp state
+      if (selectedDate) {
+       setTempEntryDate(selectedDate);
+      }
     }
   };
   
   const handleExitDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowExitDatePicker(false);
-    }
-    if (selectedDate) {
-      setForm({ ...form, exitDate: formatDateStr(selectedDate) });
+      if (selectedDate) {
+        setForm({ ...form, exitDate: formatDateStr(selectedDate) });
+      }
+    } else {
+      // iOS: just update temp state
+      if (selectedDate) {
+        setTempExitDate(selectedDate);
+      }
     }
   };
   
   // Calculate live P&L preview
   const calculatePreview = () => {
     const entry = parseFloat(form.entryPrice) || 0;
-    const exit = parseFloat(form.exitPrice) || 0;
+    const exit = parseFloat(form.exitPrice || '0') || 0;
     const qty = parseFloat(form.quantity) || 0;
     
     if (entry === 0 || exit === 0 || qty === 0) {
@@ -147,12 +158,17 @@ export default function EditTradeScreen() {
   
   // Form validation
   const isValidForm = () => {
-    return (
-      form.symbol.trim() !== '' &&
-      parseFloat(form.entryPrice) > 0 &&
-      parseFloat(form.exitPrice) > 0 &&
-      parseFloat(form.quantity) > 0
-    );
+    const baseValid = form.symbol.trim() !== '' && 
+                      parseFloat(form.entryPrice) > 0 && 
+                      parseFloat(form.quantity) > 0;
+    
+    // For closed trades, also require exit price
+    if (form.status === 'closed') {
+      return baseValid && parseFloat(form.exitPrice || '0') > 0;
+    }
+    
+    // For open trades, just need entry and quantity
+    return baseValid;
   };
   
   // Handle submit
@@ -162,15 +178,14 @@ export default function EditTradeScreen() {
       return;
     }
     
+    if (!id) return;
+    
     setIsSubmitting(true);
     Keyboard.dismiss();
     
     try {
-      const updatedTrade = createTradeRecord(trade.id, form);
-      await updateTrade(trade.id, {
-        ...updatedTrade,
-        createdAt: trade.createdAt, // Preserve original creation time
-      });
+      const updatedTrade = createTradeRecord(id, form);
+      await updateTrade(id, updatedTrade);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
@@ -186,7 +201,9 @@ export default function EditTradeScreen() {
     visible: boolean,
     onClose: () => void,
     dateValue: string,
+    tempDate: Date | null,
     onChange: (event: DateTimePickerEvent, date?: Date) => void,
+    onDone: () => void,
     title: string
   ) => (
     <Modal visible={visible} transparent animationType="slide">
@@ -206,12 +223,12 @@ export default function EditTradeScreen() {
             borderBottomColor: themeColors.cardBorder,
           }}>
             <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: themeColors.text }}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={onDone}>
               <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(16), color: '#FB923C' }}>Done</Text>
             </TouchableOpacity>
           </View>
           <DateTimePicker
-            value={parseDate(dateValue)}
+            value={tempDate || parseDate(dateValue)}
             mode="date"
             display="spinner"
             onChange={onChange}
@@ -279,7 +296,7 @@ export default function EditTradeScreen() {
                 fontSize: fontScale(14),
                 color: '#FFFFFF',
               }}>
-                {isSubmitting ? 'Saving...' : 'Update'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -387,6 +404,63 @@ export default function EditTradeScreen() {
             </View>
           </View>
           
+          {/* Status Toggle */}
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Trade Status
+            </Text>
+            <View style={{ flexDirection: 'row', gap: scale(12) }}>
+              {(['open', 'closed'] as const).map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setForm({ ...form, status });
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <LinearGradient
+                    colors={form.status === status 
+                      ? (status === 'open' ? ['#FB923C', '#F97316'] : ['#10B95F', '#059669'])
+                      : [themeColors.inputBg, themeColors.inputBg]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      paddingVertical: scale(16),
+                      borderRadius: scale(14),
+                      borderWidth: form.status === status ? 0 : 1,
+                      borderColor: themeColors.cardBorder,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Ionicons 
+                      name={status === 'open' ? 'time-outline' : 'checkmark-circle-outline'} 
+                      size={scale(18)} 
+                      color={form.status === status ? '#FFFFFF' : themeColors.textMuted} 
+                      style={{ marginBottom: scale(4) }}
+                    />
+                    <Text style={{
+                      fontFamily: fonts.bold,
+                      fontSize: fontScale(14),
+                      color: form.status === status ? '#FFFFFF' : themeColors.textMuted,
+                      textTransform: 'uppercase',
+                    }}>
+                      {status}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
           {/* Dates Section */}
           <View style={{ marginBottom: scale(24) }}>
             <Text style={{ 
@@ -397,7 +471,7 @@ export default function EditTradeScreen() {
               letterSpacing: 1, 
               marginBottom: scale(10) 
             }}>
-              Trade Dates
+              {form.status === 'open' ? 'Entry Date' : 'Trade Dates'}
             </Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               <TouchableOpacity
@@ -420,29 +494,33 @@ export default function EditTradeScreen() {
                 </Text>
               </TouchableOpacity>
               
-              <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
-              </View>
-              
-              <TouchableOpacity
-                onPress={() => setShowExitDatePicker(true)}
-                style={{
-                  flex: 1,
-                  backgroundColor: themeColors.inputBg,
-                  borderRadius: scale(14),
-                  borderWidth: 1,
-                  borderColor: themeColors.cardBorder,
-                  padding: scale(16),
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
-                  <Ionicons name="log-out-outline" size={scale(16)} color="#FB923C" />
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginLeft: scale(6), textTransform: 'uppercase' }}>Exit</Text>
-                </View>
-                <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
-                  {formatDateDisplay(form.exitDate)}
-                </Text>
-              </TouchableOpacity>
+              {form.status === 'closed' && (
+                <>
+                  <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
+                  </View>
+                  
+                  <TouchableOpacity
+                    onPress={() => setShowExitDatePicker(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: themeColors.inputBg,
+                      borderRadius: scale(14),
+                      borderWidth: 1,
+                      borderColor: themeColors.cardBorder,
+                      padding: scale(16),
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
+                      <Ionicons name="log-out-outline" size={scale(16)} color="#FB923C" />
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginLeft: scale(6), textTransform: 'uppercase' }}>Exit</Text>
+                    </View>
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
+                      {formatDateDisplay(form.exitDate || form.entryDate)}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
           
@@ -456,7 +534,7 @@ export default function EditTradeScreen() {
               letterSpacing: 1, 
               marginBottom: scale(10) 
             }}>
-              Prices
+              {form.status === 'open' ? 'Entry Price' : 'Prices'}
             </Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               <View style={{ flex: 1 }}>
@@ -493,39 +571,41 @@ export default function EditTradeScreen() {
                 </View>
               </View>
               
-              <View style={{ flex: 1 }}>
-                <View style={{
-                  backgroundColor: themeColors.inputBg,
-                  borderRadius: scale(14),
-                  borderWidth: 1,
-                  borderColor: themeColors.cardBorder,
-                  padding: scale(16),
-                }}>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginBottom: scale(8), textTransform: 'uppercase' }}>Exit Price</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
-                    <TextInput
-                      style={{ 
-                        flex: 1,
-                        fontFamily: fonts.semiBold, 
-                        fontSize: fontScale(18), 
-                        color: themeColors.text,
-                        padding: 0,
-                      }}
-                      value={form.exitPrice}
-                      onChangeText={(text) => {
-                        const cleaned = text.replace(/[^0-9.]/g, '');
-                        const parts = cleaned.split('.');
-                        const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
-                        setForm({ ...form, exitPrice: valid });
-                      }}
-                      placeholder="0.00"
-                      placeholderTextColor={themeColors.textMuted}
-                      keyboardType="decimal-pad"
-                    />
+              {form.status === 'closed' && (
+                <View style={{ flex: 1 }}>
+                  <View style={{
+                    backgroundColor: themeColors.inputBg,
+                    borderRadius: scale(14),
+                    borderWidth: 1,
+                    borderColor: themeColors.cardBorder,
+                    padding: scale(16),
+                  }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginBottom: scale(8), textTransform: 'uppercase' }}>Exit Price</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
+                      <TextInput
+                        style={{ 
+                          flex: 1,
+                          fontFamily: fonts.semiBold, 
+                          fontSize: fontScale(18), 
+                          color: themeColors.text,
+                          padding: 0,
+                        }}
+                        value={form.exitPrice || ''}
+                        onChangeText={(text) => {
+                          const cleaned = text.replace(/[^0-9.]/g, '');
+                          const parts = cleaned.split('.');
+                          const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                          setForm({ ...form, exitPrice: valid });
+                        }}
+                        placeholder="0.00"
+                        placeholderTextColor={themeColors.textMuted}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
             </View>
           </View>
           
@@ -575,7 +655,7 @@ export default function EditTradeScreen() {
           </View>
           
           {/* P&L Preview */}
-          {form.entryPrice && form.exitPrice && form.quantity && (
+          {form.status === 'closed' && form.entryPrice && form.exitPrice && form.quantity && (
             <View style={{ marginBottom: scale(24) }}>
               <LinearGradient
                 colors={preview.pnl >= 0 ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)']}
@@ -597,7 +677,7 @@ export default function EditTradeScreen() {
                   textTransform: 'uppercase',
                   letterSpacing: 1,
                 }}>
-                  Updated P&L
+                  Estimated P&L
                 </Text>
                 <Text style={{
                   fontFamily: fonts.extraBold,
@@ -705,14 +785,30 @@ export default function EditTradeScreen() {
             showEntryDatePicker,
             () => setShowEntryDatePicker(false),
             form.entryDate,
+            tempEntryDate,
             handleEntryDateChange,
+            () => {
+              if (tempEntryDate) {
+                setForm({ ...form, entryDate: formatDateStr(tempEntryDate) });
+              }
+              setShowEntryDatePicker(false);
+              setTempEntryDate(null);
+            },
             'Entry Date'
           )}
           {renderIOSDatePicker(
             showExitDatePicker,
             () => setShowExitDatePicker(false),
-            form.exitDate,
+            form.exitDate || form.entryDate,
+            tempExitDate,
             handleExitDateChange,
+            () => {
+              if (tempExitDate) {
+                setForm({ ...form, exitDate: formatDateStr(tempExitDate) });
+              }
+              setShowExitDatePicker(false);
+              setTempExitDate(null);
+            },
             'Exit Date'
           )}
         </>
@@ -724,12 +820,12 @@ export default function EditTradeScreen() {
           value={parseDate(form.entryDate)}
           mode="date"
           display="default"
-          onChange={handleEntryDateChange}
+                onChange={(e, selectedDate) => handleEntryDateChange(e, selectedDate || new Date())}
         />
       )}
       {Platform.OS === 'android' && showExitDatePicker && (
         <DateTimePicker
-          value={parseDate(form.exitDate)}
+          value={parseDate(form.exitDate || form.entryDate)}
           mode="date"
           display="default"
           onChange={handleExitDateChange}

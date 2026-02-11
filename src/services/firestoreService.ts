@@ -154,11 +154,26 @@ export async function getTradesByMonth(userId: string, monthKey: string): Promis
  * Save a trade (create or update)
  */
 export async function saveTrade(userId: string, trade: Trade): Promise<void> {
-  const tradeRef = getTradeDoc(userId, trade.id);
-  await setDoc(tradeRef, {
+  const tradesRef = getTradesCollection(userId);
+  const tradeDoc = doc(tradesRef, trade.id);
+  
+  await setDoc(tradeDoc, {
     ...trade,
     updatedAt: Date.now(),
   });
+}
+
+/**
+ * Update an existing trade
+ */
+export async function updateTrade(userId: string, tradeId: string, updates: Partial<Trade>): Promise<void> {
+  const tradesRef = getTradesCollection(userId);
+  const tradeDoc = doc(tradesRef, tradeId);
+  
+  await setDoc(tradeDoc, {
+    ...updates,
+    updatedAt: Date.now(),
+  }, { merge: true });
 }
 
 /**
@@ -177,7 +192,7 @@ export function subscribeToTrades(
   callback: (trades: Trade[]) => void
 ): Unsubscribe {
   const tradesRef = getTradesCollection(userId);
-  const q = query(tradesRef, orderBy('exitDate', 'desc'));
+  const q = query(tradesRef, orderBy('createdAt', 'desc'));
   
   return onSnapshot(q, (snapshot) => {
     const trades = snapshot.docs.map(doc => ({

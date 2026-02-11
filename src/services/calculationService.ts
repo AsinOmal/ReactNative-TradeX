@@ -154,7 +154,10 @@ export function calculateCombinedStats(
   for (const monthKey of monthsWithTradeKeys) {
     countedMonths.add(monthKey);
     const monthTrades = tradesByMonth[monthKey];
-    const monthPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
+    // Only sum P&L from closed trades (open trades have undefined pnl)
+    const monthPnL = monthTrades
+      .filter(t => t.status === 'closed' && typeof t.pnl === 'number')
+      .reduce((sum, t) => sum + t.pnl!, 0);
     tradeTotalPnL += monthPnL;
     totalProfitLoss += monthPnL;
     
