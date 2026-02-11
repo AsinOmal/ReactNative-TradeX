@@ -41,17 +41,18 @@ export interface Trade {
   id: string;
   symbol: string;                    // e.g., "AAPL", "BTC"
   tradeType: 'long' | 'short';
+  status: 'open' | 'closed';         // trade status
   entryDate: string;                 // ISO date string
-  exitDate: string;                  // ISO date string
+  exitDate?: string;                 // ISO date string (optional for open trades)
   entryPrice: number;
-  exitPrice: number;
+  exitPrice?: number;                // optional for open trades
   quantity: number;
-  pnl: number;                       // calculated: (exit - entry) * qty * direction
-  returnPercentage: number;          // calculated
+  pnl?: number;                      // calculated: (exit - entry) * qty * direction (optional for open)
+  returnPercentage?: number;         // calculated (optional for open)
   notes: string;
   tags: string[];                    // e.g., ["swing", "earnings"]
-  monthKey: string;                  // links to month: 'YYYY-MM'
-  isWin: boolean;                    // calculated: pnl > 0
+  monthKey: string;                  // links to month: 'YYYY-MM' (based on entry for open trades)
+  isWin?: boolean;                   // calculated: pnl > 0 (optional for open)
   createdAt: number;
   updatedAt: number;
 }
@@ -60,10 +61,11 @@ export interface Trade {
 export interface TradeFormInput {
   symbol: string;
   tradeType: 'long' | 'short';
+  status: 'open' | 'closed';
   entryDate: string;
-  exitDate: string;
+  exitDate?: string;                 // optional for open trades
   entryPrice: string;
-  exitPrice: string;
+  exitPrice?: string;                // optional for open trades
   quantity: string;
   notes: string;
   tags: string;                      // comma-separated

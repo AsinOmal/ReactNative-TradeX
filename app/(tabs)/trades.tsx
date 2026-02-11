@@ -49,10 +49,14 @@ export default function TradesScreen() {
   
   // Filter trades
   const filteredTrades = trades.filter(trade => {
-    if (filter === 'wins') return trade.pnl > 0;
-    if (filter === 'losses') return trade.pnl < 0;
+    if (filter === 'wins') return (trade.pnl || 0) > 0;
+    if (filter === 'losses') return (trade.pnl || 0) < 0;
     return true;
-  }).sort((a, b) => new Date(b.exitDate).getTime() - new Date(a.exitDate).getTime());
+  }).sort((a, b) => {
+    const dateA = a.exitDate ? new Date(a.exitDate).getTime() : new Date(a.entryDate).getTime();
+    const dateB = b.exitDate ? new Date(b.exitDate).getTime() : new Date(b.entryDate).getTime();
+    return dateB - dateA;
+  });
   
   // Format date
   const formatDate = (dateStr: string) => {
@@ -125,8 +129,9 @@ export default function TradesScreen() {
   };
 
   const renderTradeCard = ({ item }: { item: Trade }) => {
-    const isWin = item.pnl > 0;
-    const isLoss = item.pnl < 0;
+    const isOpen = item.status === 'open';
+    const isWin = (item.pnl || 0) > 0;
+    const isLoss = (item.pnl || 0) < 0;
     
     return (
       <SwipeableRow
@@ -147,7 +152,7 @@ export default function TradesScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           {/* Left: Symbol & Type */}
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8), flexWrap: 'wrap' }}>
               <Text style={{
                 fontFamily: fonts.bold,
                 fontSize: fontScale(18),
@@ -170,6 +175,23 @@ export default function TradesScreen() {
                   {item.tradeType}
                 </Text>
               </View>
+              {isOpen && (
+                <View style={{
+                  paddingHorizontal: scale(8),
+                  paddingVertical: scale(2),
+                  borderRadius: scale(6),
+                  backgroundColor: 'rgba(251, 146, 60, 0.15)',
+                }}>
+                  <Text style={{
+                    fontFamily: fonts.bold,
+                    fontSize: fontScale(10),
+                    color: '#FB923C',
+                    textTransform: 'uppercase',
+                  }}>
+                    OPEN
+                  </Text>
+                </View>
+              )}
             </View>
             
             <Text style={{
@@ -178,7 +200,7 @@ export default function TradesScreen() {
               color: themeColors.textMuted,
               marginTop: scale(4),
             }}>
-              {formatDate(item.entryDate)} → {formatDate(item.exitDate)}
+              {isOpen ? formatDate(item.entryDate) : `${formatDate(item.entryDate)} → ${formatDate(item.exitDate || item.entryDate)}`}
             </Text>
             
             <Text style={{
@@ -187,32 +209,50 @@ export default function TradesScreen() {
               color: themeColors.textMuted,
               marginTop: scale(2),
             }}>
-              {isPrivacyMode ? '•••••••• • ••••••••' : `$${item.entryPrice.toFixed(2)} → $${item.exitPrice.toFixed(2)} × ${item.quantity}`}
+              {isPrivacyMode 
+                ? '•••••••• • ••••••••' 
+                : isOpen
+                  ? `$${item.entryPrice.toFixed(2)} × ${item.quantity}`
+                  : `$${item.entryPrice.toFixed(2)} → $${(item.exitPrice || 0).toFixed(2)} × ${item.quantity}`
+              }
             </Text>
           </View>
           
-          {/* Right: P&L */}
+          {/* Right: P&L or OPEN indicator */}
           <View style={{ alignItems: 'flex-end' }}>
-            <PrivacyAwareText 
-              value={item.pnl}
-              format={formatCurrency}
-              style={{
-                fontFamily: fonts.bold,
-                fontSize: fontScale(18),
-                color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.text,
-              }}
-              maskedValue="••••"
-            />
-            <PrivacyAwareText 
-              value={item.returnPercentage}
-              format={(val) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`}
-              style={{
-                fontFamily: fonts.medium,
-                fontSize: fontScale(12),
-                color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.textMuted,
-              }}
-              maskedValue="•••"
-            />
+            {isOpen ? (
+              <View style={{
+                paddingHorizontal: scale(12),
+                paddingVertical: scale(6),
+                borderRadius: scale(8),
+                backgroundColor: 'rgba(251, 146, 60, 0.15)',
+              }}>
+                <Ionicons name="time-outline" size={scale(20)} color="#FB923C" />
+              </View>
+            ) : (
+              <>
+                <PrivacyAwareText 
+                  value={item.pnl || 0}
+                  format={formatCurrency}
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: fontScale(18),
+                    color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.text,
+                  }}
+                  maskedValue="••••"
+                />
+                <PrivacyAwareText 
+                  value={item.returnPercentage || 0}
+                  format={(val) => `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`}
+                  style={{
+                    fontFamily: fonts.medium,
+                    fontSize: fontScale(12),
+                    color: isWin ? '#10B95F' : isLoss ? '#EF4444' : themeColors.textMuted,
+                  }}
+                  maskedValue="•••"
+                />
+              </>
+            )}
           </View>
         </View>
         

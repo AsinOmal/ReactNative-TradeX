@@ -35,6 +35,7 @@ export default function AddTradeScreen() {
   const [form, setForm] = useState<TradeFormInput>({
     symbol: '',
     tradeType: 'long',
+    status: 'closed',
     entryDate: new Date().toISOString().split('T')[0],
     exitDate: new Date().toISOString().split('T')[0],
     entryPrice: '',
@@ -96,7 +97,7 @@ export default function AddTradeScreen() {
   // Calculate live P&L preview
   const calculatePreview = () => {
     const entry = parseFloat(form.entryPrice) || 0;
-    const exit = parseFloat(form.exitPrice) || 0;
+    const exit = parseFloat(form.exitPrice || '0') || 0;
     const qty = parseFloat(form.quantity) || 0;
     
     if (entry === 0 || exit === 0 || qty === 0) {
@@ -114,12 +115,17 @@ export default function AddTradeScreen() {
   
   // Form validation
   const isValidForm = () => {
-    return (
-      form.symbol.trim() !== '' &&
-      parseFloat(form.entryPrice) > 0 &&
-      parseFloat(form.exitPrice) > 0 &&
-      parseFloat(form.quantity) > 0
-    );
+    const baseValid = form.symbol.trim() !== '' && 
+                      parseFloat(form.entryPrice) > 0 && 
+                      parseFloat(form.quantity) > 0;
+    
+    // For closed trades, also require exit price
+    if (form.status === 'closed') {
+      return baseValid && parseFloat(form.exitPrice || '0') > 0;
+    }
+    
+    // For open trades, just need entry and quantity
+    return baseValid;
   };
   
   // Handle submit
@@ -351,6 +357,63 @@ export default function AddTradeScreen() {
             </View>
           </View>
           
+          {/* Status Toggle */}
+          <View style={{ marginBottom: scale(24) }}>
+            <Text style={{ 
+              fontFamily: fonts.semiBold, 
+              fontSize: fontScale(12), 
+              color: themeColors.textMuted, 
+              textTransform: 'uppercase', 
+              letterSpacing: 1, 
+              marginBottom: scale(10) 
+            }}>
+              Trade Status
+            </Text>
+            <View style={{ flexDirection: 'row', gap: scale(12) }}>
+              {(['open', 'closed'] as const).map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setForm({ ...form, status });
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <LinearGradient
+                    colors={form.status === status 
+                      ? (status === 'open' ? ['#FB923C', '#F97316'] : ['#10B95F', '#059669'])
+                      : [themeColors.inputBg, themeColors.inputBg]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      paddingVertical: scale(16),
+                      borderRadius: scale(14),
+                      borderWidth: form.status === status ? 0 : 1,
+                      borderColor: themeColors.cardBorder,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Ionicons 
+                      name={status === 'open' ? 'time-outline' : 'checkmark-circle-outline'} 
+                      size={scale(18)} 
+                      color={form.status === status ? '#FFFFFF' : themeColors.textMuted} 
+                      style={{ marginBottom: scale(4) }}
+                    />
+                    <Text style={{
+                      fontFamily: fonts.bold,
+                      fontSize: fontScale(14),
+                      color: form.status === status ? '#FFFFFF' : themeColors.textMuted,
+                      textTransform: 'uppercase',
+                    }}>
+                      {status}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
           {/* Dates Section */}
           <View style={{ marginBottom: scale(24) }}>
             <Text style={{ 
@@ -361,7 +424,7 @@ export default function AddTradeScreen() {
               letterSpacing: 1, 
               marginBottom: scale(10) 
             }}>
-              Trade Dates
+              {form.status === 'open' ? 'Entry Date' : 'Trade Dates'}
             </Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               <TouchableOpacity
@@ -384,29 +447,33 @@ export default function AddTradeScreen() {
                 </Text>
               </TouchableOpacity>
               
-              <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
-              </View>
-              
-              <TouchableOpacity
-                onPress={() => setShowExitDatePicker(true)}
-                style={{
-                  flex: 1,
-                  backgroundColor: themeColors.inputBg,
-                  borderRadius: scale(14),
-                  borderWidth: 1,
-                  borderColor: themeColors.cardBorder,
-                  padding: scale(16),
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
-                  <Ionicons name="log-out-outline" size={scale(16)} color="#FB923C" />
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginLeft: scale(6), textTransform: 'uppercase' }}>Exit</Text>
-                </View>
-                <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
-                  {formatDateDisplay(form.exitDate)}
-                </Text>
-              </TouchableOpacity>
+              {form.status === 'closed' && (
+                <>
+                  <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="arrow-forward" size={scale(20)} color={themeColors.textMuted} />
+                  </View>
+                  
+                  <TouchableOpacity
+                    onPress={() => setShowExitDatePicker(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: themeColors.inputBg,
+                      borderRadius: scale(14),
+                      borderWidth: 1,
+                      borderColor: themeColors.cardBorder,
+                      padding: scale(16),
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
+                      <Ionicons name="log-out-outline" size={scale(16)} color="#FB923C" />
+                      <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginLeft: scale(6), textTransform: 'uppercase' }}>Exit</Text>
+                    </View>
+                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(15), color: themeColors.text }}>
+                      {formatDateDisplay(form.exitDate || form.entryDate)}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
           
@@ -420,7 +487,7 @@ export default function AddTradeScreen() {
               letterSpacing: 1, 
               marginBottom: scale(10) 
             }}>
-              Prices
+              {form.status === 'open' ? 'Entry Price' : 'Prices'}
             </Text>
             <View style={{ flexDirection: 'row', gap: scale(12) }}>
               <View style={{ flex: 1 }}>
@@ -457,39 +524,41 @@ export default function AddTradeScreen() {
                 </View>
               </View>
               
-              <View style={{ flex: 1 }}>
-                <View style={{
-                  backgroundColor: themeColors.inputBg,
-                  borderRadius: scale(14),
-                  borderWidth: 1,
-                  borderColor: themeColors.cardBorder,
-                  padding: scale(16),
-                }}>
-                  <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginBottom: scale(8), textTransform: 'uppercase' }}>Exit Price</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
-                    <TextInput
-                      style={{ 
-                        flex: 1,
-                        fontFamily: fonts.semiBold, 
-                        fontSize: fontScale(18), 
-                        color: themeColors.text,
-                        padding: 0,
-                      }}
-                      value={form.exitPrice}
-                      onChangeText={(text) => {
-                        const cleaned = text.replace(/[^0-9.]/g, '');
-                        const parts = cleaned.split('.');
-                        const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
-                        setForm({ ...form, exitPrice: valid });
-                      }}
-                      placeholder="0.00"
-                      placeholderTextColor={themeColors.textMuted}
-                      keyboardType="decimal-pad"
-                    />
+              {form.status === 'closed' && (
+                <View style={{ flex: 1 }}>
+                  <View style={{
+                    backgroundColor: themeColors.inputBg,
+                    borderRadius: scale(14),
+                    borderWidth: 1,
+                    borderColor: themeColors.cardBorder,
+                    padding: scale(16),
+                  }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: fontScale(11), color: '#FB923C', marginBottom: scale(8), textTransform: 'uppercase' }}>Exit Price</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontFamily: fonts.semiBold, fontSize: fontScale(18), color: themeColors.textMuted, marginRight: scale(4) }}>$</Text>
+                      <TextInput
+                        style={{ 
+                          flex: 1,
+                          fontFamily: fonts.semiBold, 
+                          fontSize: fontScale(18), 
+                          color: themeColors.text,
+                          padding: 0,
+                        }}
+                        value={form.exitPrice || ''}
+                        onChangeText={(text) => {
+                          const cleaned = text.replace(/[^0-9.]/g, '');
+                          const parts = cleaned.split('.');
+                          const valid = parts.length <= 2 ? parts.join('.') : parts[0] + '.' + parts.slice(1).join('');
+                          setForm({ ...form, exitPrice: valid });
+                        }}
+                        placeholder="0.00"
+                        placeholderTextColor={themeColors.textMuted}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
             </View>
           </View>
           
@@ -539,7 +608,7 @@ export default function AddTradeScreen() {
           </View>
           
           {/* P&L Preview */}
-          {form.entryPrice && form.exitPrice && form.quantity && (
+          {form.status === 'closed' && form.entryPrice && form.exitPrice && form.quantity && (
             <View style={{ marginBottom: scale(24) }}>
               <LinearGradient
                 colors={preview.pnl >= 0 ? ['rgba(16, 185, 95, 0.15)', 'rgba(16, 185, 95, 0.05)'] : ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.05)']}

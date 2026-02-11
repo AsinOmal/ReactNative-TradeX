@@ -27,19 +27,7 @@ export function createTradeRecord(
   form: TradeFormInput
 ): Trade {
   const entryPrice = parseFloat(form.entryPrice) || 0;
-  const exitPrice = parseFloat(form.exitPrice) || 0;
   const quantity = parseFloat(form.quantity) || 0;
-  
-  const { pnl, returnPercentage, isWin } = calculateTradePnL(
-    entryPrice, 
-    exitPrice, 
-    quantity, 
-    form.tradeType
-  );
-  
-  // Derive monthKey from exitDate (YYYY-MM)
-  const exitDateObj = new Date(form.exitDate);
-  const monthKey = `${exitDateObj.getFullYear()}-${String(exitDateObj.getMonth() + 1).padStart(2, '0')}`;
   
   // Parse tags from comma-separated string
   const tags = form.tags
@@ -47,24 +35,50 @@ export function createTradeRecord(
     .map(t => t.trim().toLowerCase())
     .filter(t => t.length > 0);
   
-  return {
+  // For open trades, use entry date for monthKey
+  // For closed trades, use exit date
+  const dateForMonth = form.status === 'open' ? form.entryDate : (form.exitDate || form.entryDate);
+  const dateObj = new Date(dateForMonth);
+  const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Base trade object
+  const baseTrade = {
     id,
     symbol: form.symbol.toUpperCase().trim(),
     tradeType: form.tradeType,
+    status: form.status,
     entryDate: form.entryDate,
-    exitDate: form.exitDate,
     entryPrice,
-    exitPrice,
     quantity,
-    pnl,
-    returnPercentage,
     notes: form.notes.trim(),
     tags,
     monthKey,
-    isWin,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
+  
+  // If trade is closed, calculate P&L
+  if (form.status === 'closed' && form.exitDate && form.exitPrice) {
+    const exitPrice = parseFloat(form.exitPrice) || 0;
+    const { pnl, returnPercentage, isWin } = calculateTradePnL(
+      entryPrice, 
+      exitPrice, 
+      quantity, 
+      form.tradeType
+    );
+    
+    return {
+      ...baseTrade,
+      exitDate: form.exitDate,
+      exitPrice,
+      pnl,
+      returnPercentage,
+      isWin,
+    };
+  }
+  
+  // For open trades, return without exit data
+  return baseTrade as Trade;
 }
 
 /**
@@ -80,9 +94,11 @@ export function calculateStreaks(trades: Trade[]): {
   }
   
   // Sort by exit date ascending for chronological order
-  const sorted = [...trades].sort((a, b) => 
-    new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()
-  );
+  const sorted = [...trades].sort((a, b) => {
+    const dateA = a.exitDate ? new Date(a.exitDate).getTime() : 0;
+    const dateB = b.exitDate ? new Date(b.exitDate).getTime() : 0;
+    return dateA - dateB;
+  });
   
   let currentStreak = 0;
   let longestWinStreak = 0;
@@ -91,12 +107,13 @@ export function calculateStreaks(trades: Trade[]): {
   let tempLoseStreak = 0;
   
   for (const trade of sorted) {
-    if (trade.pnl > 0) {
+    const tradePnL = trade.pnl || 0;
+    if (tradePnL > 0) {
       // Win
       tempWinStreak++;
       tempLoseStreak = 0;
       if (tempWinStreak > longestWinStreak) longestWinStreak = tempWinStreak;
-    } else if (trade.pnl < 0) {
+    } else if (tradePnL < 0) {
       // Loss
       tempLoseStreak++;
       tempWinStreak = 0;
@@ -110,9 +127,10 @@ export function calculateStreaks(trades: Trade[]): {
   
   // Current streak from most recent trades
   const lastTrade = sorted[sorted.length - 1];
-  if (lastTrade.pnl > 0) {
+  const lastPnL = lastTrade.pnl || 0;
+  if (lastPnL > 0) {
     currentStreak = tempWinStreak;
-  } else if (lastTrade.pnl < 0) {
+  } else if (lastPnL < 0) {
     currentStreak = -tempLoseStreak; // Negative for losing streak
   }
   
@@ -123,7 +141,10 @@ export function calculateStreaks(trades: Trade[]): {
  * Calculate overall trade statistics
  */
 export function calculateTradeStats(trades: Trade[]): TradeStats {
-  if (trades.length === 0) {
+  // Filter out open trades - only calculate stats for closed trades
+  const closedTrades = trades.filter(t => t.status === 'closed');
+  
+  if (closedTrades.length === 0) {
     return {
       totalTrades: 0,
       winningTrades: 0,
@@ -151,36 +172,37 @@ export function calculateTradeStats(trades: Trade[]): TradeStats {
   let bestTrade: Trade | null = null;
   let worstTrade: Trade | null = null;
   
-  for (const trade of trades) {
-    totalPnL += trade.pnl;
+  for (const trade of closedTrades) {
+    const tradePnL = trade.pnl || 0;
+    totalPnL += tradePnL;
     
-    if (trade.pnl > 0) {
+    if (tradePnL > 0) {
       winningTrades++;
-      totalProfit += trade.pnl;
-    } else if (trade.pnl < 0) {
+      totalProfit += tradePnL;
+    } else if (tradePnL < 0) {
       losingTrades++;
-      totalLoss += Math.abs(trade.pnl);
+      totalLoss += Math.abs(tradePnL);
     } else {
       breakEvenTrades++;
     }
     
-    if (!bestTrade || trade.pnl > bestTrade.pnl) {
+    if (!bestTrade || tradePnL > (bestTrade.pnl || 0)) {
       bestTrade = trade;
     }
-    if (!worstTrade || trade.pnl < worstTrade.pnl) {
+    if (!worstTrade || tradePnL < (worstTrade.pnl || 0)) {
       worstTrade = trade;
     }
   }
   
-  const { currentStreak, longestWinStreak, longestLoseStreak } = calculateStreaks(trades);
+  const { currentStreak, longestWinStreak, longestLoseStreak } = calculateStreaks(closedTrades);
   
   return {
-    totalTrades: trades.length,
+    totalTrades: closedTrades.length,
     winningTrades,
     losingTrades,
     breakEvenTrades,
     totalPnL,
-    winRate: trades.length > 0 ? (winningTrades / trades.length) * 100 : 0,
+    winRate: closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0,
     avgWin: winningTrades > 0 ? totalProfit / winningTrades : 0,
     avgLoss: losingTrades > 0 ? totalLoss / losingTrades : 0,
     profitFactor: totalLoss > 0 ? totalProfit / totalLoss : (totalProfit > 0 ? Infinity : 0),
@@ -197,8 +219,8 @@ export function calculateTradeStats(trades: Trade[]): TradeStats {
  */
 export function calculateMonthlyPnLFromTrades(trades: Trade[], monthKey: string): number {
   return trades
-    .filter(t => t.monthKey === monthKey)
-    .reduce((sum, t) => sum + t.pnl, 0);
+    .filter(t => t.monthKey === monthKey && t.status === 'closed')
+    .reduce((sum, t) => sum + (t.pnl || 0), 0);
 }
 
 /**
@@ -235,6 +257,10 @@ export function getUniqueSymbols(trades: Trade[]): string[] {
  */
 export function getRecentTrades(trades: Trade[], limit = 10): Trade[] {
   return [...trades]
-    .sort((a, b) => new Date(b.exitDate).getTime() - new Date(a.exitDate).getTime())
+    .sort((a, b) => {
+      const dateA = a.exitDate ? new Date(a.exitDate).getTime() : new Date(a.entryDate).getTime();
+      const dateB = b.exitDate ? new Date(b.exitDate).getTime() : new Date(b.entryDate).getTime();
+      return dateB - dateA;
+    })
     .slice(0, limit);
 }
