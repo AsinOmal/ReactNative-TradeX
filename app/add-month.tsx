@@ -55,7 +55,7 @@ export default function AddMonthScreen() {
     const with_ = parseCurrency(withdrawals);
     
     if (start > 0 && end >= 0) {
-      return calculateMonthMetrics(start, end, dep, with_);
+      return calculateMonthMetrics(start, end, with_, dep);
     }
     return null;
   }, [startingCapital, endingCapital, deposits, withdrawals]);
@@ -102,7 +102,7 @@ export default function AddMonthScreen() {
       return;
     }
     
-    const validation = validateMonthForm(start, end, dep, with_, selectedMonth);
+    const validation = validateMonthForm(start, end, with_, dep, selectedMonth);
     if (!validation.isValid) {
       Alert.alert('Validation Error', validation.error);
       return;
@@ -122,8 +122,8 @@ export default function AddMonthScreen() {
         selectedMonth,
         start,
         end,
-        dep,
         with_,
+        dep,
         notes,
         'closed'
       );

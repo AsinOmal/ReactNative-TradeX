@@ -34,7 +34,7 @@ export default function MonthDetailsScreen() {
   
   // Use trade P&L when trades exist
   const hasTrades = monthTrades.length > 0;
-  const tradePnL = hasTrades ? monthTrades.reduce((sum, t) => sum + t.pnl, 0) : 0;
+  const tradePnL = hasTrades ? monthTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0) : 0;
   const effectivePnL = hasTrades ? tradePnL : (month?.netProfitLoss ?? 0);
   const effectiveReturn = hasTrades && month && month.startingCapital > 0
     ? (tradePnL / month.startingCapital) * 100
@@ -78,7 +78,7 @@ export default function MonthDetailsScreen() {
     const with_ = parseCurrency(withdrawals);
     
     if (start > 0 && end >= 0) {
-      return calculateMonthMetrics(start, end, dep, with_);
+      return calculateMonthMetrics(start, end, with_, dep);
     }
     return null;
   }, [startingCapital, endingCapital, deposits, withdrawals]);
@@ -138,7 +138,7 @@ export default function MonthDetailsScreen() {
       return;
     }
     
-    const validation = validateMonthForm(start, end, dep, with_, month.month);
+    const validation = validateMonthForm(start, end, with_, dep, month.month);
     if (!validation.isValid) {
       Alert.alert('Validation Error', validation.error);
       return;
@@ -147,12 +147,12 @@ export default function MonthDetailsScreen() {
     setIsSubmitting(true);
     
     try {
-      const metrics = calculateMonthMetrics(start, end, dep, with_);
+      const metrics = calculateMonthMetrics(start, end, with_, dep);
       await updateMonth(month.id, {
         startingCapital: start,
         endingCapital: end,
-        deposits: dep,
-        withdrawals: with_,
+        deposits: with_,
+        withdrawals: dep,
         notes,
         ...metrics,
       });
@@ -453,29 +453,29 @@ export default function MonthDetailsScreen() {
                           width: 32,
                           height: 32,
                           borderRadius: 8,
-                          backgroundColor: trade.pnl >= 0 ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          backgroundColor: (trade.pnl ?? 0) >= 0 ? 'rgba(16, 185, 95, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           <Ionicons 
-                            name={trade.pnl >= 0 ? 'trending-up' : 'trending-down'} 
+                            name={(trade.pnl ?? 0) >= 0 ? 'trending-up' : 'trending-down'} 
                             size={16} 
-                            color={trade.pnl >= 0 ? colors.profit : colors.loss} 
+                            color={(trade.pnl ?? 0) >= 0 ? colors.profit : colors.loss} 
                           />
                         </View>
                         <View>
                           <Text style={{ fontFamily: fonts.semiBold, fontSize: 14, color: colors.text }}>{trade.symbol}</Text>
                           <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted }}>
-                            {new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {trade.exitDate ? new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Open'}
                           </Text>
                         </View>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: trade.pnl >= 0 ? colors.profit : colors.loss }}>
-                          {trade.pnl >= 0 ? '+' : ''}${Math.abs(trade.pnl).toFixed(2)}
+                        <Text style={{ fontFamily: fonts.bold, fontSize: 14, color: (trade.pnl ?? 0) >= 0 ? colors.profit : colors.loss }}>
+                          {(trade.pnl ?? 0) >= 0 ? '+' : ''}${Math.abs(trade.pnl ?? 0).toFixed(2)}
                         </Text>
                         <Text style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted }}>
-                          {trade.returnPercentage >= 0 ? '+' : ''}{trade.returnPercentage.toFixed(1)}%
+                          {(trade.returnPercentage ?? 0) >= 0 ? '+' : ''}{(trade.returnPercentage ?? 0).toFixed(1)}%
                         </Text>
                       </View>
                     </TouchableOpacity>
